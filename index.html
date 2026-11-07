@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Borregos S.L.</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Borregos S.L. Sociedad de responsabilidad muy limitada. K de queso.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23ffd23f'/%3E%3Ctext x='32' y='46' font-family='Arial,sans-serif' font-weight='800' font-size='40' text-anchor='middle' fill='%23111'%3EK%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+<link rel="modulepreload" href="assets/js/sede.js?v=800aa4e208">
+<link rel="preload" as="image" href="assets/tex/floor-map-2048.webp" media="(pointer: fine) and (min-width: 560px) and (min-height: 560px)">
+<link rel="preload" as="image" href="assets/tex/floor-map-1024.webp" media="(pointer: coarse), (max-width: 559px), (max-height: 559px)">
+<link rel="preload" as="image" href="assets/retratos/miguel.jpg" crossorigin="anonymous">
+<style>
+/* Layout: the 3D hall is the stage. Text sits in short dark cards, one idea per screen;
+   bold grotesk headlines and the yellow from the original site for actions and counters. */
+:root{
+  color-scheme: dark;
+  --bg:#0c0c0b;
+  --card:rgba(17,17,16,.8);
+  --card-solid:#151514;
+  --text:#f3f1ec;
+  --muted:#a7a39b;
+  --yellow:#ffd23f;
+  --red:#e5484d;
+  --line:rgba(255,255,255,.1);
+  --font:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --gut-l:max(16px, env(safe-area-inset-left, 0px));
+  --gut-r:max(16px, env(safe-area-inset-right, 0px));
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:16px;line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+img,video{max-width:100%;display:block}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
+::selection{background:var(--yellow);color:#111}
+
+/* ---------- 3D stage ---------- */
+#stage{position:fixed;top:0;left:0;width:100%;height:100vh;height:100lvh;z-index:0;background:radial-gradient(120% 90% at 50% 40%,#1a1712 0%,#0c0c0b 60%)}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .7s var(--ease)}
+#gl.ready{opacity:1}
+.veil{position:fixed;inset:0;z-index:1;pointer-events:none;background:none}
+.no-webgl .veil{background:radial-gradient(130% 100% at 50% 50%,transparent 60%,rgba(0,0,0,.45) 100%)}
+.alarm-tint{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(160,10,20,0),rgba(160,10,20,.45));opacity:0;transition:opacity .3s}
+body.alarm .alarm-tint{opacity:1;animation:alarm .5s steps(2) infinite}
+@keyframes alarm{50%{opacity:.35}}
+
+/* ---------- top bar ---------- */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding-top:calc(env(safe-area-inset-top,0px) + 14px);padding-bottom:22px;padding-left:var(--gut-l);padding-right:var(--gut-r);pointer-events:none;
+  background:linear-gradient(180deg,rgba(12,12,11,.86) 0%,rgba(12,12,11,.6) 55%,rgba(12,12,11,0) 100%)}
+.topbar > *{pointer-events:auto}
+.mark{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:800;font-size:17px;letter-spacing:-.02em}
+.mark b{width:28px;height:28px;border-radius:8px;background:var(--yellow);color:#111;display:grid;place-items:center;font-size:16px;font-weight:800}
+.pill{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 16px;border-radius:999px;border:0;
+  background:rgba(255,255,255,.1);color:var(--text);font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:background .2s,transform .2s}
+.pill:hover{background:rgba(255,255,255,.18)}
+.pill:active{transform:scale(.97)}
+.pill.yellow{background:var(--yellow);color:#111}
+.pill.yellow:hover{background:#ffe07a}
+.pill.big{min-height:48px;padding:0 22px;font-size:15px}
+.pill.danger{background:rgba(229,72,77,.16);color:#ffb3b5}
+.pill.danger:hover{background:var(--red);color:#fff}
+.progress{position:fixed;top:0;left:0;height:3px;width:100%;z-index:21;transform-origin:0 50%;transform:scaleX(0);background:var(--yellow)}
+
+/* ---------- menu ---------- */
+.index{position:fixed;inset:0;z-index:40;background:rgba(10,10,9,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  display:grid;align-content:center;padding-left:var(--gut-l);padding-right:var(--gut-r);padding-block:80px 40px;overflow:auto;
+  opacity:0;visibility:hidden;transition:opacity .35s var(--ease),visibility 0s linear .35s}
+.index.open{opacity:1;visibility:visible;transition:opacity .35s var(--ease),visibility 0s}
+.index li{opacity:0;transform:translateY(16px);transition:opacity .3s var(--ease),transform .3s var(--ease)}
+.index.open li{opacity:1;transform:none;transition:opacity .45s var(--ease) calc(60ms + var(--i,0) * 40ms),transform .55s var(--ease) calc(60ms + var(--i,0) * 40ms)}
+.index .index-close{opacity:0;transform:scale(.9);transition:opacity .3s var(--ease),transform .3s var(--ease)}
+.index.open .index-close{opacity:1;transform:none}
+.index ol{list-style:none;margin:0 auto;padding:0;width:min(720px,100%);display:grid}
+.index li a{display:block;padding:9px 0;text-decoration:none;font-size:clamp(26px,4vw,40px);font-weight:800;letter-spacing:-.03em;line-height:1.1;transition:color .2s}
+.index li a:hover,.index li a:focus-visible{color:var(--yellow)}
+.index-close{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:var(--gut-r)}
+
+/* ---------- story ---------- */
+main{position:relative;z-index:2;pointer-events:none}
+.scene{position:relative;min-height:100vh;min-height:100svh;display:flex;align-items:center;
+  padding-left:var(--gut-l);padding-right:var(--gut-r);padding-block:14vh;pointer-events:none}
+.scene a,.scene button,.scene .card,.scene video,.scene .lot,.scene .tile{pointer-events:auto}
+.wrap{width:min(1240px,100%);margin-inline:auto;display:flex}
+.wrap > *{min-width:0}
+.at-right{justify-content:flex-end}
+.at-center{justify-content:center;text-align:center}
+.scene.low{align-items:flex-end;padding-block:30vh 9vh}
+
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.035em;text-wrap:balance}
+h2{font-size:clamp(34px,2.2rem + 1.8vw,58px);line-height:.98}
+h3{font-size:clamp(26px,1.4rem + .9vw,34px);line-height:1.02}
+p{margin:0;text-wrap:pretty}
+.muted{color:var(--muted)}
+.kicker{font-size:13px;font-weight:600;color:var(--yellow);letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.tag{font-size:18px;font-weight:600;line-height:1.3;color:var(--text)}
+
+.card{position:relative;width:min(420px,100%);background:var(--card);border-radius:18px;padding:26px 26px 24px;display:grid;gap:14px;
+  backdrop-filter:blur(18px) saturate(1.1);-webkit-backdrop-filter:blur(18px) saturate(1.1);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.card.wide{width:min(520px,100%)}
+.card .row{margin-top:4px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+/* hero */
+.hero{min-height:100vh;min-height:100svh;align-items:flex-end;padding-block:16vh 16vh}
+.hero .wrap{flex-direction:column;align-items:flex-start;gap:18px}
+.hero h1{font-size:clamp(64px,1rem + 9vw,150px);line-height:.84;font-weight:800;font-stretch:112%;letter-spacing:-.055em;text-shadow:0 10px 50px rgba(0,0,0,.5)}
+.hero h1 span{display:block}
+.hero .sub{font-size:clamp(18px,1rem + .6vw,24px);font-weight:500;max-width:28ch;line-height:1.3}
+.hero .pres-line{font-size:14px;color:var(--muted)}
+.hero .pres-line b{color:var(--text);font-weight:600}
+.scroll-hint{font-size:14px;font-weight:500;color:var(--muted);display:inline-flex;align-items:center;gap:8px}
+.scroll-hint i{display:inline-block;animation:bob 1.8s var(--ease) infinite;font-style:normal}
+@keyframes bob{50%{transform:translateY(4px)}}
+.loading-note{font-size:13px;color:var(--muted);transition:opacity .8s}
+.loading-note.done{opacity:0}
+
+.hint{display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:var(--yellow)}
+.hint::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--yellow);animation:ping 2s infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(255,210,63,.6)}100%{box-shadow:0 0 0 12px rgba(255,210,63,0)}}
+
+/* gallery stops */
+.stop{min-height:110vh;min-height:110svh}
+.stop .card{width:min(400px,100%)}
+.stop .top{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+
+/* presidency */
+.pres .name{font-size:clamp(40px,2rem + 2.6vw,66px);line-height:.92;font-stretch:108%}
+.quote{margin:0;font-size:20px;font-weight:600;line-height:1.3;padding-left:14px;border-left:3px solid var(--yellow)}
+
+/* dense sections */
+.dense{display:block;padding-block:22vh 18vh;
+  background:linear-gradient(180deg,rgba(12,12,11,0) 0,rgba(12,12,11,.9) 16vh,rgba(12,12,11,.9) calc(100% - 16vh),rgba(12,12,11,0) 100%)}
+.dense .wrap{flex-direction:column;gap:36px;pointer-events:auto}
+.sec-head{display:grid;gap:12px;max-width:640px}
+.sec-head p{color:var(--muted);font-size:17px}
+
+.services{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.svc{background:var(--card-solid);border-radius:16px;padding:22px;display:grid;gap:8px;align-content:start}
+.svc h3{font-size:21px;letter-spacing:-.02em;line-height:1.15}
+.svc p{color:var(--muted);font-size:15px}
+.svc small{font-size:13px;font-weight:600;color:var(--yellow)}
+
+.lots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 18px}
+.lot{display:grid;gap:10px;align-content:start;margin:0}
+.lot .ph{position:relative;aspect-ratio:4/5;overflow:hidden;border-radius:14px;background:#161614}
+.lot .ph img{width:100%;height:100%;object-fit:cover;transition:transform .8s var(--ease)}
+.lot:hover .ph img{transform:scale(1.04)}
+.lot figcaption{display:grid;gap:2px}
+.lot .meta{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.lot h3{font-size:20px;letter-spacing:-.02em}
+.lot p{color:var(--muted);font-size:15px}
+.lot .badge{position:absolute;top:10px;left:10px;background:var(--yellow);color:#111;font-size:12px;font-weight:700;padding:5px 9px;border-radius:999px}
+
+/* archive */
+.archive{display:block;padding:0;background:linear-gradient(180deg,rgba(12,12,11,0),rgba(12,12,11,.9) 14vh,rgba(12,12,11,.9) calc(100% - 14vh),rgba(12,12,11,0))}
+.archive-pin{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr;gap:clamp(14px,3vh,28px);
+  padding-top:calc(env(safe-area-inset-top,0px) + 84px);padding-bottom:4vh}
+.archive-head{padding-left:var(--gut-l);padding-right:var(--gut-r)}
+.archive-head .wrap{justify-content:space-between;align-items:flex-end;gap:16px 24px;flex-wrap:wrap}
+.archive-hint{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;display:flex;gap:12px;align-items:center}
+.archive-hint i{display:block;width:120px;height:3px;border-radius:3px;background:rgba(255,255,255,.12);position:relative;overflow:hidden}
+.archive-hint i::after{content:"";position:absolute;inset:0;background:var(--yellow);transform-origin:0 50%;transform:scaleX(var(--p,0))}
+.archive{--row-h:min(60vh,560px);--cap-h:52px}
+.track{display:flex;align-items:flex-start;padding-left:max(var(--gut-l),calc((100vw - 1240px)/2));min-height:0;transform:translate3d(0,0,0)}
+.track-row{display:flex;gap:clamp(12px,1.6vw,20px);height:var(--row-h)}
+.track-row.b{display:none}
+.tile{position:relative;flex:none;height:100%;width:calc((var(--row-h) - var(--cap-h)) * var(--r));margin:0;display:grid;grid-template-rows:1fr var(--cap-h)}
+.tile .ph{position:relative;overflow:hidden;background:#161614;border-radius:14px;min-height:0;height:100%}
+.tile img,.tile video{width:100%;height:100%;object-fit:cover}
+.tile figcaption{padding-top:9px;font-size:14px;font-weight:500;line-height:1.3;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile.classified img{filter:blur(26px) brightness(.55);transform:scale(1.15);transition:filter .6s,transform .6s}
+.tile.classified.open img{filter:none;transform:none}
+.tile .declass{position:absolute;inset:0;display:grid;place-content:center;gap:8px;text-align:center;background:none;border:0;cursor:pointer;padding:14px}
+.tile .declass b{font-size:13px;font-weight:700;background:var(--red);color:#fff;padding:6px 10px;border-radius:999px}
+.tile .declass small{font-size:12px;color:var(--text);opacity:.8}
+.tile.classified.open .declass{display:none}
+.tile .snd{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);border:0;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text)}
+
+/* game */
+.game img{width:84px;height:84px;object-fit:contain}
+
+/* contact */
+.links{display:grid;margin:2px 0 0;border-top:1px solid var(--line)}
+.links div{display:flex;justify-content:space-between;align-items:baseline;gap:6px 16px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line)}
+.links dt{font-size:13px;color:var(--muted)}
+.links dd{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em;min-width:0;overflow-wrap:anywhere}
+.links dd a{text-decoration:none}
+.links dd a:hover{color:var(--yellow)}
+.mail{user-select:all;-webkit-user-select:all}
+.destruct{padding-top:16px;margin-top:6px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+footer{position:relative;z-index:2;padding-left:var(--gut-l);padding-right:var(--gut-r);padding-block:40px calc(32px + env(safe-area-inset-bottom,0px));background:var(--bg)}
+footer .wrap{justify-content:space-between;gap:12px 24px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+footer b{color:var(--text)}
+
+/* dossier */
+dialog.dossier{width:min(860px,calc(100vw - 32px));max-height:calc(100vh - 48px);max-height:calc(100svh - 48px);padding:0;border:0;border-radius:20px;background:var(--card-solid);color:var(--text);overflow:hidden}
+dialog.dossier{opacity:0;transform:translateY(18px) scale(.98);transition:opacity .3s var(--ease),transform .4s var(--ease)}
+dialog.dossier.show{opacity:1;transform:none}
+dialog.dossier::backdrop{background:rgba(0,0,0,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;transition:opacity .3s var(--ease)}
+dialog.dossier.show::backdrop{opacity:1}
+.dos{display:grid;grid-template-columns:260px 1fr;max-height:inherit}
+.dos-side{position:relative;background:#0e0e0d}
+.dos-side img{width:100%;height:100%;object-fit:cover;min-height:100%}
+.dos-body{overflow:auto;padding:34px 34px 30px;display:grid;gap:14px;align-content:start;max-height:calc(100vh - 50px);max-height:calc(100svh - 50px)}
+.dos-body h2{font-size:clamp(30px,1.4rem + 1.6vw,42px)}
+.dos-text{display:grid;gap:12px;color:#d6d2ca;font-size:16px;line-height:1.65}
+.dos-close{position:absolute;top:12px;right:12px;z-index:2;background:rgba(0,0,0,.6)}
+
+/* floating label, toast */
+.bleat{position:fixed;z-index:30;pointer-events:none;font-weight:800;font-size:28px;letter-spacing:-.02em;color:var(--text);text-shadow:0 2px 18px rgba(0,0,0,.7);transform:translate(-50%,-50%);animation:bleat 1.4s var(--ease) forwards;white-space:nowrap}
+@keyframes bleat{0%{opacity:0;transform:translate(-50%,-30%) scale(.8)}15%{opacity:1;transform:translate(-50%,-60%) scale(1)}100%{opacity:0;transform:translate(-50%,-180%)}}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);opacity:0;transition:opacity .3s var(--ease),transform .35s var(--ease);z-index:35;background:var(--text);color:#111;padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* explosion */
+.boom-flash{position:fixed;inset:0;z-index:3;pointer-events:none;background:radial-gradient(circle at 67% 52%,rgba(255,226,180,.55),rgba(255,140,50,.25) 30%,rgba(255,90,20,0) 65%);animation:boomflash .6s ease-out forwards}
+@keyframes boomflash{0%{opacity:1}100%{opacity:0}}
+.pill:disabled{cursor:default;opacity:.75}
+.pill.danger:disabled,.pill.danger:disabled:hover{background:rgba(229,72,77,.16);color:#ffb3b5}
+body.shake main{animation:shake .12s infinite}
+@keyframes shake{25%{transform:translate(2px,-1px)}50%{transform:translate(-2px,1px)}75%{transform:translate(1px,2px)}}
+.no-webgl #stage{background:radial-gradient(80% 60% at 50% 100%,#3a2a14 0%,#14110c 45%,#0c0c0b 80%)}
+
+/* responsive */
+@media (max-width:980px){
+  .services{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lots{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dos{grid-template-columns:1fr}
+  .dos-side{height:220px}
+  .dos-side img{object-position:center 18%}
+  .dos-body{max-height:calc(100svh - 48px - 220px);padding:24px 20px 24px}
+}
+@media (max-width:720px){
+  .services{grid-template-columns:1fr}
+  .card{padding:22px 20px 20px;gap:12px}
+  .stop{align-items:flex-end;padding-block:56vh 8vh}
+  .stop .wrap,.at-right{justify-content:center}
+  .scene.side-panel,.scene.low{align-items:flex-end;padding-block:52vh 8vh}
+  .scene.side-panel .wrap{justify-content:center}
+  .hero{padding-block:46vh 13vh}
+  .hero::before{content:"";position:absolute;inset:40% 0 0 0;background:linear-gradient(180deg,rgba(12,12,11,0),rgba(12,12,11,.8) 30%,rgba(12,12,11,.92));pointer-events:none}
+  .hero .wrap{position:relative}
+  .archive{--row-h:min(54vh,460px);--cap-h:50px}
+  .archive-head .sec-head p{display:none}
+  .boom-flash{background:radial-gradient(circle at 50% 32%,rgba(255,226,180,.55),rgba(255,140,50,.25) 30%,rgba(255,90,20,0) 65%)}
+  .lots{gap:20px 12px}
+  .lot h3{font-size:17px}
+  .lot p{font-size:14px}
+}
+@media (max-width:460px){
+  .lots{grid-template-columns:1fr 1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  .index,.index li,.index .index-close,dialog.dossier,dialog.dossier::backdrop,.toast{transition-duration:.01s!important;transition-delay:0s!important}
+  .scroll-hint i,.hint::before{animation:none}
+  #gl{transition:none}
+  body.shake main{animation:none}
+}
+</style>
+
+</head>
+<body>
+<div id="stage"><canvas id="gl" aria-hidden="true"></canvas></div>
+<div class="veil" aria-hidden="true"></div>
+<div class="alarm-tint" aria-hidden="true"></div>
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="mark" href="#inicio" data-jump="inicio" aria-label="Borregos S.L., ir al inicio"><b>K</b>Borregos S.L.</a>
+  <button class="pill" id="menuBtn" aria-expanded="false" aria-controls="index">Menú</button>
+</header>
+
+<nav class="index" id="index" aria-label="Secciones" aria-hidden="true">
+  <button class="pill index-close" id="menuClose">Cerrar</button>
+  <ol>
+    <li style="--i:0"><a href="#inicio" data-jump="inicio">Inicio</a></li>
+    <li style="--i:1"><a href="#fundacion" data-jump="fundacion">Fundación</a></li>
+    <li style="--i:2"><a href="#rebano" data-jump="rebano">El rebaño</a></li>
+    <li style="--i:3"><a href="#presidencia" data-jump="presidencia">El Presidente</a></li>
+    <li style="--i:4"><a href="#servicios" data-jump="servicios">Servicios</a></li>
+    <li style="--i:5"><a href="#patrimonio" data-jump="patrimonio">Patrimonio</a></li>
+    <li style="--i:6"><a href="#archivo" data-jump="archivo">Archivo</a></li>
+    <li style="--i:7"><a href="juegos.html">Flappy Oveja</a></li>
+    <li style="--i:8"><a href="#contacto" data-jump="contacto">Contacto</a></li>
+  </ol>
+</nav>
+
+<main id="story">
+
+  <section class="scene hero" id="inicio" data-cam="hero" data-chapter="">
+    <div class="wrap">
+      <h1><span>Borregos</span><span>S.L.</span></h1>
+      <p class="sub">Sociedad de responsabilidad muy limitada.</p>
+      <p class="pres-line">Presidente vitalicio: <b>Miguel Madrid Gasco</b></p>
+      <div class="row">
+        <button class="pill yellow big" data-cheese>K de queso</button>
+        <span class="scroll-hint">Baja <i>↓</i></span>
+      </div>
+      <p class="loading-note" id="loadingNote">Encendiendo las lámparas…</p>
+    </div>
+  </section>
+
+  <section class="scene side-panel" id="fundacion" data-cam="windows" data-chapter="Fundación">
+    <div class="wrap at-right">
+      <article class="card wide">
+        <span class="kicker">Fundación</span>
+        <h2>Nacimos en Fallas.</h2>
+        <p>Todo empezó en el contexto más valenciano posible: una falla, una noche de marzo y demasiada pólvora para tan poco criterio. Nadie lo planeó. Un grupo de individuos objetivamente inútiles coincidió entre petardos, ruido y malas ideas, y por algún motivo nadie se fue a casa.</p>
+        <p>Así se consolidó esta agrupación de gilipollas funcionales, unidos más por la costumbre que por cualquier talento destacable. En teoría, cada uno «se encarga de algo». En la práctica, nadie hace nada de forma clara, salvo dos o tres que lo intentan con buena voluntad y un fracaso moderado. El resto acompaña, opina sin base y contribuye al desorden general.</p>
+        <p class="muted">Sin estatutos, sin capital y con un único objeto social: conseguir el carnet del 33 % y acceder con dignidad administrativa a zona Gemelos. No por necesidad, sino por coherencia vital.</p>
+        <p class="tag">No somos un modelo a seguir, pero sí un fenómeno persistente.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="scene side-panel" id="emblema" data-cam="sheep" data-chapter="El emblema">
+    <div class="wrap">
+      <article class="card">
+        <span class="kicker">El emblema</span>
+        <h2>Gafas doradas, corona torcida.</h2>
+        <p class="muted">Cualquier parecido con el Presidente es intencionado.</p>
+        <span class="hint">Toca la oveja</span>
+      </article>
+    </div>
+  </section>
+
+  <section class="scene low" id="rebano" data-cam="hall" data-chapter="El rebaño">
+    <div class="wrap at-center">
+      <article class="card wide" style="justify-items:center">
+        <span class="kicker">El rebaño</span>
+        <h2>Ocho retratos. Al fondo, el que manda.</h2>
+      </article>
+    </div>
+  </section>
+
+  <div id="stops"></div>
+
+  <section class="scene pres side-panel" id="presidencia" data-cam="lead-far" data-chapter="El Presidente">
+    <div class="wrap at-right">
+      <article class="card">
+        <span class="kicker">El Presidente</span>
+        <h2>Nunca fue elegido. Simplemente ocurrió.</h2>
+      </article>
+    </div>
+  </section>
+
+  <section class="scene pres side-panel" data-cam="lead-portrait" data-chapter="El Presidente">
+    <div class="wrap at-right">
+      <article class="card">
+        <span class="kicker">Presidente vitalicio</span>
+        <h2 class="name">Miguel Madrid Gasco</h2>
+        <p class="tag">No sabe leer, pero es pura esencia.</p>
+        <blockquote class="quote">Cuando habla, se escucha. Cuando calla, preocupa.</blockquote>
+        <div class="row"><button class="pill yellow" data-dossier="6">Ver ficha</button></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="scene pres side-panel" data-cam="lead-crest" data-chapter="K de queso">
+    <div class="wrap">
+      <article class="card">
+        <span class="kicker">El lema</span>
+        <h2>K de queso.</h2>
+        <p>Deletreando la contraseña del router, llegó a la K y dijo «k de queso». Nadie le corrigió. Ahora es el lema.</p>
+        <div class="row"><button class="pill yellow" data-cheese>Probar</button></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="scene dense" id="servicios" data-cam="crane" data-chapter="Servicios">
+    <div class="wrap">
+      <header class="sec-head">
+        <span class="kicker">Servicios</span>
+        <h2>Lo que hacemos.</h2>
+        <p>Presupuesto sin compromiso. Resultados, tampoco.</p>
+      </header>
+      <div class="services">
+        <article class="svc"><h3>Escolta de engaño táctico</h3><p>Vamos todos a la discoteca a hacer bulto mientras uno intenta ligar.</p><small>Éxito: −33 %</small></article>
+        <article class="svc"><h3>Presencia cero</h3><p>Vamos a tu evento, miramos el móvil, nos comemos todo y nos vamos.</p><small>Incluye vaciar el catering</small></article>
+        <article class="svc"><h3>Turismo en la borregueta</h3><p>Rotondas, semáforos y un pene de goma pegado al capó.</p><small>Destino: ninguno</small></article>
+        <article class="svc"><h3>Asistencia para samaritanas del amor</h3><p>Consejos inútiles y validación colectiva de malas decisiones.</p><small>Opiniones no solicitadas</small></article>
+        <article class="svc"><h3>Retiro en la Borregocueva</h3><p>No hacer nada con un kilo de kebab por cabeza.</p><small>Salsa blanca en exceso</small></article>
+        <article class="svc"><h3>Recolección urbana</h3><p>Señales, conos y objetos que claramente no se estaban usando.</p><small>Resultados: ver Patrimonio</small></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene dense" id="patrimonio" data-cam="crane2" data-chapter="Patrimonio">
+    <div class="wrap">
+      <header class="sec-head">
+        <span class="kicker">Patrimonio</span>
+        <h2>Lo que hemos ido juntando.</h2>
+        <p>Nada está a la venta. Algunas cosas deberían devolverse.</p>
+      </header>
+      <div class="lots" id="lots"></div>
+    </div>
+  </section>
+
+  <section class="scene archive" id="archivo" data-cam="crane3" data-chapter="Archivo">
+    <div class="archive-pin">
+      <div class="archive-head">
+        <div class="wrap">
+          <div class="sec-head" style="gap:8px">
+            <span class="kicker">Archivo</span>
+            <h2>Pruebas gráficas.</h2>
+            <p>Se ha retirado lo estrictamente necesario.</p>
+          </div>
+          <div class="archive-hint"><span id="archiveCount">30 piezas</span><i id="archiveBar"></i></div>
+        </div>
+      </div>
+      <div class="track" id="track">
+        <div class="track-row a" id="rowA"></div>
+        <div class="track-row b" id="rowB"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene side-panel" id="juego" data-cam="return" data-chapter="Juego">
+    <div class="wrap at-right">
+      <article class="card game">
+        <span class="kicker">Juego</span>
+        <img src="assets/ovejita.webp" alt="" width="84" height="84" loading="lazy">
+        <h2>Flappy Oveja.</h2>
+        <p class="muted">Haz volar al Presidente entre tuberías.</p>
+        <div class="row"><a class="pill yellow" href="juegos.html">Jugar</a></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="scene contact side-panel" id="contacto" data-cam="end" data-chapter="Contacto">
+    <div class="wrap">
+      <article class="card">
+        <span class="kicker">Contacto</span>
+        <h2>Escríbenos.</h2>
+        <p class="muted">Insultos, negocios inútiles o lo que sea. El Presidente se lo hará leer.</p>
+        <dl class="links">
+          <div><dt>Correo</dt><dd class="mail" id="mail">Borregoasqueroso@gmail.com</dd></div>
+          <div><dt>Instagram</dt><dd><a href="https://www.instagram.com/losborregoss?stkn=ZWRzNzFxc29zZW14" target="_blank" rel="noopener">@losborregoss</a></dd></div>
+        </dl>
+        <div class="row">
+          <button class="pill yellow" id="copyMail">Copiar correo</button>
+          <a class="pill" href="https://www.instagram.com/losborregoss?stkn=ZWRzNzFxc29zZW14" target="_blank" rel="noopener">Abrir Instagram</a>
+        </div>
+        <div class="destruct">
+          <span>Botón de autodestrucción</span>
+          <button class="pill danger" id="destructBtn">No pulsar</button>
+        </div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><b>Borregos S.L.</b> · K de queso · 2026</span>
+    <span>Tienda: próximamente.</span>
+  </div>
+</footer>
+
+<dialog class="dossier" id="dossier" aria-labelledby="dosName">
+  <div class="dos">
+    <div class="dos-side"><img id="dosImg" alt=""></div>
+    <div class="dos-body">
+      <span class="kicker" id="dosNum">01 / 08</span>
+      <h2 id="dosName">Nombre</h2>
+      <p class="tag" id="dosTag">Tagline</p>
+      <div class="dos-text" id="dosText"></div>
+    </div>
+  </div>
+  <button class="pill dos-close" id="dosClose">Cerrar</button>
+</dialog>
+
+
+<script type="application/json" id="bios-data">[{"num": "Borrego #1", "sub": "Autoridad por volumen corporal.", "img": "Samu.jpg", "name": "Samuel Alfonso Duart Villanueva", "bio": "El borrego es un gordo de gimnasio, una aberración de la biología moderna: va a entrenar, suda, gruñe… y sigue gordo. Pero ojo, impone. No por velocidad ni agilidad, sino por pura presencia gravitacional. Parece un monstruo sacado de un bestiario medieval, de esos que no corren detrás de ti porque saben que ya te están intimidando. Es adicto a las mujeres, pero desde una superioridad casi filosófica: observa, aprecia, idealiza… y no toca. Un deseo contemplativo. Un erotismo conceptual. Prefiere la idea al acto, porque el acto requiere levantarse y eso ya es trabajo. Evade impuestos con la tranquilidad del que ha leído lo justo como para saber que el sistema es una farsa. No lo hace por dinero, sino por principios vagamente articulados y una pereza muy bien estructurada. Y por eso, contra todo pronóstico, tiene más sentido común que la media. Es vago, sí, pero vago culto. De los que no hacen nada mientras piensan cosas. Un borrego ilustrado, gordo, monstruoso y chorra, que no sirve para mucho… pero tampoco pretende servir. Y eso, curiosamente, es lo más coherente de todo."}, {"num": "Borrego #2", "sub": "Ruido, humo y cero planificación.", "img": "David.jpg", "name": "David Monfort Ortiz", "bio": "Este borrego es la alegría de la fiesta por insistencia, no porque sea divertido, sino porque siempre está ahí, resistiendo. Si el borrego uno no hacía nada, este ha llevado el concepto al extremo: su vida se basa en sobrevivir día a día a base de droga, alcohol y una fe ciega en que mañana ya se verá. Nunca hace nada, jamás, pero curiosamente siempre está cansado, como si existiera en modo ahorro de energía. Lo único que hace es sacarse el carnet de camión y trabajar de informático usando ChatGPT. Tiene gallinas, y las menciona con un orgullo extraño, como si fueran un símbolo de estatus o un logro vital que nadie más entiende. Trabaja de repartidor de Amazon y lo defiende como si fuera una vocación heroica, una cruzada moderna con mochila y código de barras. Su moto se oye a tres kilómetros, más que un mosquito con problemas de autoestima, y la ha decorado con pegatinas de rayos porque está convencido de que así corre más. La aerodinámica, para él, es mental. Con el coche pasa lo mismo: un Dacia Sandero al que le ha puesto unas garras en el faro delantero para imponer miedo y respeto. No impone nada, pero él se siente intimidante, que es lo importante. Vive convencido de que el ruido es personalidad y que la estética agresiva sustituye al contenido. No construye nada, no mejora nada y no aprende demasiado, pero anima cualquier ambiente a base de presencia constante, volumen alto y decisiones dudosas. Un borrego fiestero, orgulloso y caótico, que no deja legado… solo eco, y con la cara mas dura que un jetoven."}, {"num": "Borrego #4", "sub": "Piernas opcionales, torso obligatorio.", "img": "Frank.jpg", "name": "Frank Córdoba Moreno", "bio": "Este borrego es sospechoso por diseño. Serio en apariencia, callado de primeras… pero cuando habla, habla. Está y no está a la vez, como si siempre tuviera media mente en otro sitio. Misterioso sin proponérselo. De esos que parecen una cosa y luego resultan ser otra completamente distinta, y encima con flexibilidad moral, mental y articular. Es probablemente el más random de todos. Perfectamente capaz de desaparecer un día y reaparecer diciendo que se ha ido a China a vivir experiencias vitales intensas y poco explicables. No da detalles. No los necesita. Tú ya sabes a qué ha ido. Aparentemente tiene cara de psicópata funcional, de los que no parpadean mucho y te miran como si calcularan algo, pero luego resulta que estudia ingeniería, así que todo encaja: la mirada vacía es solo procesamiento interno. Matemáticas pasando por detrás de los ojos. Físicamente es inconfundible. Basta verlo para saber que ha hecho calistenia en solitario, como un monje urbano: torso hipertrofiado, piernas que parecen no haber recibido el memo. Actualmente juega en la segunda división Italiana. Una descompensación tan evidente que ya es firma estética. No es constante, no es predecible, no es normal… pero funciona. Un borrego en estado cuántico: serio y absurdo, inquietante y carismático, desaparecido y presente. Probablemente de los más raros. Probablemente de los más interesantes."}, {"num": "Borrego #5", "sub": "Visionario incomprendido.", "img": "Jos.jpg", "name": "Jose Gil Dimas", "bio": "Este borrego es el pesao oficial, el que no calla jamás, pero con matices. Juzga y analiza absolutamente todo desde una perspectiva matemática, lógica y despiadadamente analítica. La vida no le pasa: la descompone en variables. Hay otro pesao en el grupo, sí, pero a ese le dio vergüenza salir aquí: habla mucho y no dice nada. Este, al menos, dice cosas, aunque nadie las haya pedido. Es el típico vecino al que nunca quieres encontrarte, y mucho menos en el ascensor. Porque lo que empieza como un “buenas” acaba derivando en sus experiencias en el boxeo, luego pasa por una reflexión existencial sobre la entropía social y termina explicándote por qué no quiere tener hijas por su salud mental. Cuando acaba, tú ya deberías estar cenando y él aún está calentando motores. Es el MacGyver de los borregos. No puedes pedirle algo y que no lo tenga. Su coche es el bolsillo de Doraemon: cables, bridas, herramientas, objetos que no sabías que existían pero que ahora resultan indispensables. Su casa no es una casa, es el taller de Mani Manitas en versión permanente. Odia a la gente, profundamente, pero busca no tener conflictos, lo cual lo convierte en una contradicción funcional. Es polifacético hasta el absurdo: te escala una montaña, te vuelca un pedaló sin pedir perdón, y al mes siguiente aparece trabajando tranquilamente en el sector de calidad de una multinacional tipo Stadler, como si fuera lo más normal del mundo. Tiene aura. Aura densa. Aura que llena habitaciones. Y por si fuera poco, es el dueño del medio de transporte oficial de los borregos: la mítica borregueta. No habla bajo, no pasa desapercibido y no descansa nunca… pero, por alguna razón inexplicable, siempre acaba siendo útil. Y eso le salva."}, {"num": "Borrego #6", "sub": "No sabe leer, pero es pura esencia.", "img": "Miguel.jpg", "name": "Miguel Madrid Gasco", "bio": "Señores, estamos ante la estrella del grupo, el eje invisible que mantiene todo unido. Sin él, el sistema colapsa. Tiene una cabeza nivel Megamind, desproporcionada pero gloriosa, coronada por una mirada penetrante que, curiosamente, se intensifica de forma sobrenatural cuando hay mujeres cerca. Coincidencias que tiene la biología. Es un putero nato, no por vicio sino por vocación. Desde que pasó por los brazos de Venus —aquel evento histórico marcado por el inolvidable “ay carallo”— no ha vuelto a ser el mismo. Vive atrapado en ese recuerdo como otros en guerras pasadas. No la supera. No quiere. Trabaja en el Leroy Merlin, templo del bricolaje y las decisiones impulsivas, y como si eso no fuera suficiente, tiene su propia skin en el Gang Beasts, lo que automáticamente lo eleva a entidad mitológica. Es el líder supremo del grupo, aunque nunca fue elegido: simplemente ocurrió. Cuando habla, se escucha. Cuando calla, preocupa. Ojo si es muy tarde y empieza con esa mirada perdida en el aire, porque hace destrozos en el corazón ajeno sin tocarte. Hay rumores —no confirmados por la ciencia— de que tiene una tranca de otro mundo, lo cual explicaría muchas cosas y no aclararía ninguna. No sabe leer. Literalmente. Deletreó la contraseña del router y dijo “k de queso”. Desde ese momento, eso no es un error: es nuestro lema, nuestra filosofía, y nuestro escudo. Cabeza grande, carisma peligroso, líder natural y analfabetismo funcional. La estrella. El pegamento del grupo. El caos necesario."}, {"num": "Borrego #7", "sub": "Sí a todo, consecuencias luego.", "img": "Luis.jpg", "name": "Luis Blasco-Ibáñez Berbel", "bio": "Este borrego es el del sí perpetuo. Puede tener 40 cosas que hacer, entre ellas un trabajo de la universidad que entrega ese mismo día a las 12 de la noche, pero si hay un plan con un 90 % de probabilidad de desastre, te va a decir que sí. Sin dudar. Con sonrisa. Con energía inexplicable. Sí, también estudia en la universidad, aunque viva en una contradicción constante: está hasta los cojones de ella, pero siempre está feliz. Feliz de verdad. Sospechosamente feliz. Es el graciosillo picante del grupo, ese al que quieres y odias a partes iguales. Hay días que te dan ganas de reventarle… pero no puedes pillarle porque corre mucho, física y verbalmente. Es el artífice del lenguaje borreguil moderno, creador de frases sin significado aparente pero con un poder devastador: “¿Eres un bombito?” “¿Tú plataneas?” “Menudo cancin.” Expresiones vacías que, repetidas lo suficiente, se convierten en dogma. Vive al límite entre la irresponsabilidad y la magia social. Siempre aparece, siempre anima, siempre se mete en líos leves pero constantes. Le queda un año de carrera y luego se va de Erasmus, lo que ya se intuye como un evento borreguil internacional. ¿Londres? Probablemente. ¿Caos? Seguro. ¿Dirá que sí a todo? Sin ninguna duda. Un borrego agotador amante de la sangría, rápido, feliz y peligroso. Pero imprescindible."}, {"num": "Borrego #9", "sub": "Confianza intacta, casa no.", "img": "Leandro.jpg", "name": "Leandro Fontana", "bio": "Este borrego apareció de los últimos, como los DLC: compañero de gym del gordo, desbloqueable por insistencia. Tiene correa, sí, pero más suelta, de esas que permiten perderse un poco sin que nadie tire demasiado. Vive solo, lo cual explica muchas cosas y empeora otras. Con la caradura legendaria de los borregos, nos metemos en su casa sin pedir permiso y de ahí nace la borregocueva, templo del desorden funcional (la cerradura de la puerta se abre con un cuchillo). Nos usa descaradamente para limpiar su casa… para que luego vuelva a estar hecha un cristo en tiempo récord. Condones por el suelo que ni quita, como si formaran parte del mobiliario. Decoración postmoderna. Puede haber una pelea campal en su salón, gritos, caos, cristales temblando, y él seguirá jugando al GTA, impasible, como si la violencia real fuera solo ruido ambiental. Dice que tiene un plan de vida. Él lo dice. El resto del mundo piensa que está completamente perdido, flotando sin rumbo pero con mucha confianza. Lo único que, según el consenso popular, puede salvarlo es seguir los pasos de Danirep. No se sabe cómo ni cuándo, pero ahí está la fe. Su hermano tiene un bar al que no vamos a volver jamás: caro, restrictivo y traumático. Nos metieron en un habitáculo diminuto, un horno cerrado, porque ya sabían que íbamos a hacer ruido y decidieron castigarnos preventivamente. Un borrego caótico, cómodo en el desastre, con planes nebulosos y casa siempre sucia. Vive solo, vive fuerte, vive raro. Perdido… pero convencido. Y eso, dentro del grupo, ya es una forma de dirección."}, {"num": "Borrego #10", "sub": "Está ahí.", "img": "Adrian.jpg", "name": "Adrian Fernandez Núñez", "bio": "Es el más pequeño del grupo, y se nota. No porque haga ruido ni intente demostrar nada —para nada, no es de esos—, sino porque carga con esa mezcla rara de estar todavía descifrando el manual de instrucciones de la vida y, al mismo tiempo, mirarte como si ya hubiera leído todos los spoilers y se estuviera riendo por dentro. Esa dualidad de “estoy aprendiendo” con mirada de “tranquilos, ya lo vi venir y va a ser divertido”. Siempre va vestido de negro y camina con ese aire de pensador atormentado, como si arrastrara el peso del universo… o quizá solo una mala decisión estética de 2017 que todavía no ha logrado desinstalar. Él cree que desprende estilo y flow natural; en su cabeza suena una banda sonora alternativa de fondo. En la realidad, proyecta un \"confía en el proceso\" tan intenso que no sabes si te está vendiendo café artesanal o preparándote para una crisis existencial express. Quiere imponer presencia, pero lo que despierta es ternura y ganas de arroparlo con una manta. Dan ganas de darle un bocadillo y preguntarle ha dormido bien. Tiene cara de pan. Pan artesano, del bueno: corteza crujiente, miga tierna. De ese que, aunque se empeñe, no intimida a nadie. Es alto y con ojos azules, detalle que lo ha salvado socialmente más veces de las que admitiría sin tartamudear. Porque el pelo… ese pelo es otro rollo. Lleva el corte estándar de \"misterioso contemporáneo\": ni acierto ni desastre, simplemente flota allí, como diciendo \"déjame en paz, pero obsérvame\". Como una pestaña abierta desde hace meses que nadie se atreve a cerrar por si acaso \"es importante\". No molesta, no genera debate. Está. Cumple horario. Punto. Es callado, tranquilo y —dato clave— siempre está atento. Aunque parezca de distraído, no se le escapa nada. Mientras los demás hablan, él archiva. Mientras los demás reaccionan, él ya hizo tres análisis y medio. Tiene un radar silencioso que capta todo: gestos, cambios de ambiente, intenciones ocultas… sin levantar la voz, sin reclamar foco, sin hacer aspavientos. Está presente como el WiFi bueno: invisible hasta que falla, y entonces maldita sea, lo notas de inmediato. Y aunque parezca discreto, tiene más conocidas de las que cualquier ingenuo pensaría. Se mueve entre conversaciones como si nada, escucha más de lo que habla y genera confianza sin esfuerzo. No necesita brillar; simplemente cae bien. Es ese tipo de persona que cuando se va, alguien pregunta: \"Oye, ¿y él?\"… y nadie recuerda en qué momento se volvió indispensable. No lidera, no estorba, no marca el rumbo… pero siempre está ahí. Como ese personaje secundario que no parece clave hasta que te das cuenta de que sin él, la trama simplemente se cae a pedazos."}, {"num": "Borrego #13", "sub": "Frente premium y miedo estructural a las mujeres.", "img": "Ruben.jpg", "name": "Rubén Herranz García", "bio": "Este espécimen ha conseguido convertir su vida en un experimento científico basado exclusivamente en comer y entrenar, con la pequeña anomalía de que los resultados del entrenamiento parecen haberse perdido durante el transporte. Su frente, en cambio, progresa con una constancia admirable. Una superficie craneal de proporciones inmobiliarias que él mismo se encarga de potenciar pidiendo coletas por el gimnasio, no tanto por estética sino por el noble propósito de dejar más frente al descubierto. Una estrategia capilar revolucionaria: menos pelo, más territorio.\n\nEs pijo, pero no de cualquier manera. Tiene ese tipo de elegancia que aparece incluso cuando está cenando auténticas guarrerías a horas cuestionables, probablemente después de haber entrenado durante dos horas para justificar exactamente esa cena. Su metabolismo vive en una contradicción permanente: come como si fuera a competir mañana y tiene un físico que parece no haberse enterado todavía. Su gran orgullo anatómico, sin embargo, reside más abajo: un culo de dimensiones administrativas, posiblemente catalogado como espacio de interés público.\n\nSe hace pirris con la solemnidad de quien está construyendo una identidad y mantiene una relación peculiar con las mujeres: las teme. Mucho. No es que no le gusten; es que las contempla como una especie animal impredecible cuya proximidad puede provocar consecuencias desconocidas. Es el Anticoños Boss, una entidad capaz de enfrentarse a una sentadilla pesada sin pestañear, pero que ante una mujer atractiva experimenta una repentina necesidad de mirar al suelo y revisar el móvil. Se llama Rubén Herranz.\n\nVirgen, reservado y socialmente peculiar, vive atrapado entre el deseo de destacar y el instinto de desaparecer cuando alguien le presta demasiada atención. Quiere presencia, pero no interacción. Quiere llamar la atención, pero no que le hablen. Quiere que se note la frente, el culo, los pirris y absolutamente todo… menos él cuando aparece una mujer.\n\nY así continúa su existencia: comiendo, entrenando, cenando basura, solicitando coletas ajenas y cambiando fronteras craneales. Un pijo de gimnasio con culo de monumento, frente de aeropuerto y miedo a las mujeres suficiente como para considerarlo una disciplina olímpica."}]</script>
+<script>
+(function(){
+'use strict';
+var $ = function(s, r){ return (r || document).querySelector(s); };
+var $$ = function(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+var BIOS = [];
+try { BIOS = JSON.parse($('#bios-data').textContent); } catch(e) {}
+
+// Gallery order. n = number in the original site's bios (used to find the text).
+var HERD = [
+  { n:1,  key:'samu',    ex:'Va al gimnasio, suda, gruñe… y sigue gordo. Pero impone.' },
+  { n:2,  key:'david',   ex:'Siempre está en la fiesta. Nunca hace nada, pero siempre está cansado.' },
+  { n:4,  key:'frank',   ex:'Callado de primeras. Capaz de irse a China sin avisar y volver como si nada.' },
+  { n:5,  key:'jose',    ex:'El pesao oficial. Un «buenas» en el ascensor acaba en una charla sobre la entropía.' },
+  { n:7,  key:'luis',    ex:'Si hay un plan con un 90 % de probabilidad de desastre, dice que sí.' },
+  { n:9,  key:'leandro', ex:'Vive solo, y de ahí nace la Borregocueva. La puerta se abre con un cuchillo.' },
+  { n:10, key:'adrian',  ex:'El pequeño. Siempre de negro; quiere imponer y acaba dando ternura.' },
+  { n:13, key:'ruben',   ex:'Come y entrena. Los resultados del entrenamiento se perdieron por el camino.' }
+];
+var TOTAL = HERD.length;
+function pad(n){ return (n < 10 ? '0' : '') + n; }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+function bioOf(n){ for (var i = 0; i < BIOS.length; i++){ if (parseInt(BIOS[i].num.replace(/\D/g,''),10) === n) return BIOS[i]; } return null; }
+function tagOf(b){ return b.sub.replace(/\.?$/, '.'); }
+
+/* ---------- gallery stops ---------- */
+var html = '';
+HERD.forEach(function(h, i){
+  var left = true, b = bioOf(h.n) || { name:'', sub:'' };   // every portrait hangs on the left wall
+  html += '<section class="scene stop" data-cam="stop-' + i + '" data-chapter="El rebaño · ' + pad(i + 1) + '/' + pad(TOTAL) + '">'
+    + '<div class="wrap' + (left ? ' at-right' : '') + '"><article class="card">'
+    + '<div class="top"><span class="kicker">' + pad(i + 1) + ' / ' + pad(TOTAL) + '</span></div>'
+    + '<h3>' + esc(b.name) + '</h3>'
+    + '<p class="tag">' + esc(tagOf(b)) + '</p>'
+    + '<p class="muted">' + esc(h.ex) + '</p>'
+    + '<div class="row"><button class="pill" data-dossier="' + h.n + '">Ver ficha</button></div>'
+    + '</article></div></section>';
+});
+$('#stops').outerHTML = html;
+
+/* ---------- dossier ---------- */
+var KEY = { 6:'miguel' }; HERD.forEach(function(h){ KEY[h.n] = h.key; });
+var dlg = $('#dossier'), lastFocus = null;
+function paragraphs(t){
+  if (/\n/.test(t)) return t.split(/\n+/).map(function(s){ return s.trim(); }).filter(Boolean);
+  var ss = t.replace(/\s+/g, ' ').match(/[^.!?…]+(?:[.!?…]+["»”]?|$)\s*/g) || [t];
+  var out = [], cur = '';
+  ss.forEach(function(s){ cur += s; if (cur.length > 360){ out.push(cur.trim()); cur = ''; } });
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
+function openDossier(n){
+  var b = bioOf(n); if (!b || !KEY[n]) return;
+  lastFocus = document.activeElement;
+  var idx = -1; HERD.forEach(function(h, i){ if (h.n === n) idx = i; });
+  $('#dosImg').src = 'assets/retratos/' + KEY[n] + '.jpg';
+  $('#dosImg').alt = 'Retrato de ' + b.name;
+  $('#dosNum').textContent = n === 6 ? 'Presidente vitalicio' : pad(idx + 1) + ' / ' + pad(TOTAL);
+  $('#dosName').textContent = b.name;
+  $('#dosTag').textContent = tagOf(b);
+  $('#dosText').innerHTML = paragraphs(b.bio).map(function(p){ return '<p>' + esc(p) + '</p>'; }).join('');
+  clearTimeout(dlgTimer);
+  if (!dlg.open){ if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', ''); }
+  $('.dos-body', dlg).scrollTop = 0;
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ dlg.classList.add('show'); }); });
+}
+var dlgTimer = 0;
+function closeDossier(){
+  if (!dlg.open) return;
+  dlg.classList.remove('show');
+  clearTimeout(dlgTimer);
+  dlgTimer = setTimeout(function(){ if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); }, reduced ? 0 : 320);
+}
+$('#dosClose').addEventListener('click', closeDossier);
+dlg.addEventListener('cancel', function(e){ e.preventDefault(); closeDossier(); });
+dlg.addEventListener('click', function(e){ if (e.target === dlg) closeDossier(); });
+dlg.addEventListener('close', function(){ if (lastFocus && lastFocus.focus) lastFocus.focus(); });
+document.addEventListener('click', function(e){
+  var t = e.target.closest('[data-dossier]');
+  if (t){ e.preventDefault(); openDossier(parseInt(t.getAttribute('data-dossier'), 10)); }
+});
+
+/* ---------- collection ---------- */
+var LOTS = [
+  ['semaforo','Semáforo','23.02.2026','Ámbar permanente.'],
+  ['fichas','Fichas 3D para la feria','10.03.2026','Impresas en casa.'],
+  ['miguel-bebe','Miguel de pequeño','15.04.2026','No se toca.', true],
+  ['silla','Silla de ruedas robada','05.05.2026','Ensayo para el 33 %.'],
+  ['valla','Valla de tráfico','22.05.2026','Delimitaba algo. Ya no.'],
+  ['extintor','Extintor','14.06.2026','Sin estrenar. De momento.'],
+  ['robot','Robot inútil','01.07.2026','Limpia peor que nosotros.'],
+  ['dildo','Dildo 3D','18.08.2026','Prototipo.'],
+  ['bici','Bicicleta robada','02.09.2026','Frena regular.']
+];
+$('#lots').innerHTML = LOTS.map(function(l, k){
+  return '<figure class="lot"><div class="ph"><img src="assets/patrimonio/' + l[0] + '.jpg" alt="' + esc(l[1]) + '" loading="lazy">'
+    + (l[4] ? '<span class="badge">Del Presidente</span>' : '') + '</div>'
+    + '<figcaption><span class="meta">Lote ' + pad(k + 1) + ' · ' + l[2] + '</span>'
+    + '<h3>' + esc(l[1]) + '</h3><p>' + esc(l[3]) + '</p></figcaption></figure>';
+}).join('');
+
+/* ---------- archive ---------- */
+var ARCH = [
+  ['muelle',619,1100,'La única foto bonita del archivo.'],
+  ['13',825,1100,'El pedaló no sobrevivió.'],
+  ['v20',480,848,'Departamento náutico.','v'],
+  ['12',619,1100,'Consejo de administración.'],
+  ['14',619,1100,'Junta general extraordinaria.'],
+  ['10',619,1100,'El Presidente revisa las cuentas. Por los dibujos.'],
+  ['1',1100,619,'Reunión de dirección. Fase REM.'],
+  ['5',873,1100,'Adquisición de señalética.'],
+  ['v21',480,848,'Recolección urbana.','v'],
+  ['8',619,1100,'Fusión empresarial.'],
+  ['15',825,1100,'Team building.'],
+  ['4',1100,619,'Mirando al Mediterráneo. No preguntes.'],
+  ['v19',540,960,'Turismo en la borregueta.','v'],
+  ['16',1100,619,'Retiro en la Borregocueva.'],
+  ['coche',825,1100,'En ruta. Destino: ninguno.'],
+  ['v18',540,960,'Copiloto hidratándose.','v'],
+  ['2',1100,619,'Montaje de mobiliario.'],
+  ['tres-durmiendo-cama',619,1100,'Alojamiento compartido.'],
+  ['cama-movil',619,1100,'Teletrabajo.'],
+  ['tirado-suelo',619,1100,'Fin de jornada.'],
+  ['mirando-lado',825,1100,'Auditoría interna.'],
+  ['durmiendo-cerca',1092,1100,'Escucha activa.'],
+  ['9',561,711,'Comité de crisis.'],
+  ['6',508,1100,'Barba en autogestión.'],
+  ['silla-de-ruedas',619,1100,'Ensayo general para el 33 %.'],
+  ['historia-instagram',834,1100,'Relaciones institucionales.'],
+  ['v22',480,848,'Puerta del baño. Sin comentarios.','v'],
+  ['retrete-1',619,1100,'Informe trimestral (I).','c'],
+  ['retrete-2',619,1100,'Informe trimestral (II).','c'],
+  ['3',1024,1024,'Retrato oficial, versión oveja.']
+];
+$('#archiveCount').textContent = ARCH.length + ' piezas';
+var rowA = $('#rowA');
+ARCH.forEach(function(a){
+  var kind = a[4] || 'p';
+  var ratio = Math.max(.56, Math.min(1.5, a[1] / a[2]));
+  var media;
+  if (kind === 'v'){
+    media = '<video muted loop playsinline preload="none" poster="assets/video/' + a[0] + '.jpg" src="assets/video/' + a[0] + '.mp4" aria-label="' + esc(a[3]) + '"></video>'
+      + '<button class="snd" type="button" aria-pressed="false">Sonido</button>';
+  } else {
+    media = '<img data-src="assets/archivo/' + a[0] + '.jpg" alt="' + esc(a[3]) + '" decoding="async" width="' + a[1] + '" height="' + a[2] + '">';
+    if (kind === 'c') media += '<button class="declass" type="button"><b>Clasificado</b><small>Toca para verlo, bajo tu responsabilidad</small></button>';
+  }
+  rowA.insertAdjacentHTML('beforeend', '<figure class="tile' + (kind === 'c' ? ' classified' : '') + '" style="--r:' + ratio.toFixed(3) + '"><div class="ph">' + media
+    + '</div><figcaption>' + esc(a[3]) + '</figcaption></figure>');
+});
+$$('.tile.classified .declass').forEach(function(bt){ bt.addEventListener('click', function(){ bt.closest('.tile').classList.add('open'); }); });
+$$('.tile .snd').forEach(function(bt){
+  bt.addEventListener('click', function(){
+    var v = bt.parentNode.querySelector('video'); v.muted = !v.muted;
+    bt.setAttribute('aria-pressed', String(!v.muted)); bt.textContent = v.muted ? 'Sonido' : 'Silenciar';
+    if (v.paused) v.play().catch(function(){});
+  });
+});
+if ('IntersectionObserver' in window){
+  var vio = new IntersectionObserver(function(es){
+    es.forEach(function(en){
+      var v = en.target;
+      if (en.isIntersecting && !reduced) v.play().catch(function(){});
+      else if (!en.isIntersecting) v.pause();
+    });
+  }, { threshold: .35 });
+  $$('.tile video').forEach(function(v){ vio.observe(v); });
+}
+var archive = $('#archivo'), track = $('#track'), archBar = $('#archiveBar');
+// load the archive photos when the section gets close (native lazy-loading misses images moved with transforms on some phones)
+var archLoaded = false;
+function loadArchive(){
+  if (archLoaded) return; archLoaded = true;
+  $$('img[data-src]', archive).forEach(function(im){ im.src = im.getAttribute('data-src'); im.removeAttribute('data-src'); });
+}
+if ('IntersectionObserver' in window){
+  var aio = new IntersectionObserver(function(es){ if (es.some(function(e){ return e.isIntersecting; })){ loadArchive(); aio.disconnect(); } }, { rootMargin: '1200px 0px' });
+  aio.observe(archive);
+} else loadArchive();
+setTimeout(loadArchive, 15000);
+var archDist = 0, ARCH_SPEED = 1.7;
+function layoutArchive(){
+  var padL = parseFloat(getComputedStyle(track).paddingLeft) || 0;
+  archDist = Math.max(0, rowA.scrollWidth + padL + Math.max(16, innerWidth * .05) - innerWidth);
+  archive.style.height = (archDist / ARCH_SPEED + innerHeight) + 'px';
+}
+
+/* ---------- menu / navigation ---------- */
+var idx = $('#index'), menuBtn = $('#menuBtn');
+function menuOpen(){ return idx.classList.contains('open'); }
+function setMenu(open, keepFocus){
+  idx.classList.toggle('open', open);
+  idx.setAttribute('aria-hidden', String(!open));
+  menuBtn.setAttribute('aria-expanded', String(open));
+  if (open) setTimeout(function(){ var a = $('a', idx); if (a) a.focus({ preventScroll:true }); }, 60);
+  else if (!keepFocus) menuBtn.focus({ preventScroll:true });
+}
+menuBtn.addEventListener('click', function(){ setMenu(!menuOpen()); });
+$('#menuClose').addEventListener('click', function(){ setMenu(false); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && menuOpen()) setMenu(false); });
+document.addEventListener('click', function(e){
+  var a = e.target.closest('[data-jump]');
+  if (!a){ var ext = e.target.closest('#index a'); if (ext) setMenu(false, true); return; }
+  var el = document.getElementById(a.getAttribute('data-jump')); if (!el) return;
+  e.preventDefault(); if (menuOpen()) setMenu(false, true);
+  var y = el.getBoundingClientRect().top + scrollY;
+  if (el.id === 'inicio') y = 0;
+  else if (!el.classList.contains('dense') && !el.classList.contains('archive')) y = y + el.offsetHeight / 2 - innerHeight / 2;
+  scrollTo({ top: Math.max(0, y), behavior: reduced ? 'auto' : 'smooth' });
+});
+
+/* ---------- chapter label, progress, archive scroll ---------- */
+var prog = $('#progress'), ticking = false;
+function onScroll(){
+  ticking = false;
+  var max = document.documentElement.scrollHeight - innerHeight;
+  prog.style.transform = 'scaleX(' + (max > 0 ? Math.min(1, scrollY / max) : 0) + ')';
+  var ar = archive.getBoundingClientRect();
+  var p = archDist > 0 ? Math.min(1, Math.max(0, -ar.top * ARCH_SPEED / archDist)) : 0;
+  track.style.transform = 'translate3d(' + (-p * archDist).toFixed(1) + 'px,0,0)';
+  archBar.style.setProperty('--p', p.toFixed(3));
+}
+addEventListener('scroll', function(){ if (!ticking){ ticking = true; requestAnimationFrame(onScroll); } }, { passive:true });
+function relayout(){ layoutArchive(); onScroll(); window.dispatchEvent(new Event('brg:layout')); }
+var lastW = innerWidth, lastH = innerHeight;
+addEventListener('resize', function(){
+  if (innerWidth === lastW && Math.abs(innerHeight - lastH) < 160) return;
+  lastW = innerWidth; lastH = innerHeight; relayout();
+});
+addEventListener('load', relayout);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+relayout();
+
+/* ---------- copy email ---------- */
+function toast(msg){
+  var t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role','status'); t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ t.classList.add('show'); }); });
+  setTimeout(function(){ t.classList.remove('show'); setTimeout(function(){ t.remove(); }, 400); }, 2000);
+}
+$('#copyMail').addEventListener('click', function(){
+  var txt = $('#mail').textContent.trim();
+  var fallback = function(){ var r = document.createRange(); r.selectNodeContents($('#mail')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Correo seleccionado'); };
+  try { navigator.clipboard.writeText(txt).then(function(){ toast('Correo copiado'); }, fallback); } catch(e){ fallback(); }
+});
+
+/* ---------- sheep voice (Web Audio) ---------- */
+var AC = null;
+function bleat(pitch){
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    var t = AC.currentTime, dur = .85 + Math.random() * .3, f0 = (pitch || 1) * (300 + Math.random() * 70);
+    var o = AC.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(f0 * 1.12, t); o.frequency.linearRampToValueAtTime(f0, t + .14); o.frequency.linearRampToValueAtTime(f0 * .9, t + dur);
+    var vib = AC.createOscillator(); vib.frequency.value = 6; var vg = AC.createGain(); vg.gain.value = f0 * .03; vib.connect(vg); vg.connect(o.frequency);
+    var trem = AC.createOscillator(); trem.frequency.value = 16 + Math.random() * 6; var tg = AC.createGain(); tg.gain.value = .42;
+    var mod = AC.createGain(); mod.gain.value = .55; trem.connect(tg); tg.connect(mod.gain);
+    var lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 4200;
+    var f1 = AC.createBiquadFilter(); f1.type = 'bandpass'; f1.frequency.value = 900; f1.Q.value = 4;
+    var f2 = AC.createBiquadFilter(); f2.type = 'bandpass'; f2.frequency.value = 2400; f2.Q.value = 6;
+    var g1 = AC.createGain(); g1.gain.value = 2.2; var g2 = AC.createGain(); g2.gain.value = 1.1;
+    var amp = AC.createGain(); amp.gain.value = 0;
+    o.connect(lp); lp.connect(f1); lp.connect(f2); f1.connect(g1); f2.connect(g2); g1.connect(mod); g2.connect(mod); mod.connect(amp); amp.connect(AC.destination);
+    amp.gain.setValueAtTime(0, t); amp.gain.linearRampToValueAtTime(.8, t + .05); amp.gain.setValueAtTime(.8, t + dur * .55); amp.gain.exponentialRampToValueAtTime(.001, t + dur);
+    [o, vib, trem].forEach(function(x){ x.start(t); x.stop(t + dur + .05); });
+  } catch(e){}
+}
+function floatLabel(text, x, y){
+  var el = document.createElement('div'); el.className = 'bleat'; el.textContent = text;
+  el.style.left = x + 'px'; el.style.top = y + 'px'; document.body.appendChild(el);
+  setTimeout(function(){ el.remove(); }, 1500);
+}
+
+/* ---------- cheese ---------- */
+document.addEventListener('click', function(e){
+  var c = e.target.closest('[data-cheese]'); if (!c) return;
+  var r = c.getBoundingClientRect();
+  window.dispatchEvent(new CustomEvent('brg:cheese'));
+  floatLabel('¡K de queso!', r.left + r.width / 2, r.top - 10);
+  if (document.documentElement.classList.contains('no-webgl')) bleat(1.15);
+});
+
+/* ---------- explosion sound (Web Audio) ---------- */
+function primeAudio(){ try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch(e){} }
+function boom(){
+  try {
+    primeAudio();
+    var t = AC.currentTime, sr = AC.sampleRate, len = Math.floor(sr * 2.4);
+    var buf = AC.createBuffer(1, len, sr), d = buf.getChannelData(0), brown = 0;
+    for (var i = 0; i < len; i++){ var w = Math.random() * 2 - 1; brown = (brown + 0.02 * w) / 1.02; d[i] = (w * 0.35 + brown * 3.2) * Math.pow(1 - i / len, 2.4); }
+    var src = AC.createBufferSource(); src.buffer = buf;
+    var lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(2600, t); lp.frequency.exponentialRampToValueAtTime(160, t + 1.8);
+    var g = AC.createGain(); g.gain.setValueAtTime(1.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 2.3);
+    var thump = AC.createOscillator(); thump.type = 'sine'; thump.frequency.setValueAtTime(95, t); thump.frequency.exponentialRampToValueAtTime(26, t + 0.7);
+    var tg = AC.createGain(); tg.gain.setValueAtTime(1.3, t); tg.gain.exponentialRampToValueAtTime(0.001, t + 0.95);
+    var comp = AC.createDynamicsCompressor(), out = AC.createGain(); out.gain.value = 0.85;
+    src.connect(lp); lp.connect(g); g.connect(comp); thump.connect(tg); tg.connect(comp); comp.connect(out); out.connect(AC.destination);
+    src.start(t); thump.start(t); thump.stop(t + 1.1);
+  } catch(e){}
+}
+
+/* ---------- self-destruct: the sheep blows up and the site carries on without it ---------- */
+var busy = false, dBtn = $('#destructBtn'), DESTRUCT_MS = 2800;
+dBtn.addEventListener('click', function(){
+  if (busy) return; busy = true;
+  primeAudio();   // must start inside the click, or the browser keeps it muted
+  dBtn.textContent = 'Te dijimos que no…'; dBtn.disabled = true;
+  document.body.classList.add('alarm'); if (!reduced) document.body.classList.add('shake');
+  window.dispatchEvent(new CustomEvent('brg:alarm', { detail: { delay: DESTRUCT_MS } }));
+  setTimeout(function(){ bleat(1.5); }, DESTRUCT_MS - 1200);
+  setTimeout(function(){
+    document.body.classList.remove('shake');
+    document.body.classList.remove('alarm');
+    boom();
+    if (!reduced){ var f = document.createElement('div'); f.className = 'boom-flash'; document.body.appendChild(f); setTimeout(function(){ f.remove(); }, 1000); }
+    window.dispatchEvent(new CustomEvent('brg:explode'));
+    dBtn.textContent = 'Oveja destruida';
+    var h = $('#emblema .hint'); if (h) h.textContent = 'Descanse en queso';
+  }, DESTRUCT_MS);
+});
+
+window.BRG = { bleat: bleat, floatLabel: floatLabel, reduced: reduced };
+})();
+
+</script>
+<script type="module" src="assets/js/sede.js?v=800aa4e208"></script>
+
+</body>
+</html>
