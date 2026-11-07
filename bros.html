@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Borrego Bros · Borregos S.L.</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+<style>
+:root{color-scheme:dark;--bg:#0c0c0b;--card:rgba(17,17,16,.88);--text:#f3f1ec;--muted:#a7a39b;--yellow:#ffd23f;--line:rgba(255,255,255,.08);
+  --font:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:var(--font);background:var(--bg);color:var(--text);overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#game{position:fixed;inset:0;width:100%;height:100%;display:block;background:#0c0c0b}
+.pill{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border-radius:999px;border:0;background:rgba(255,255,255,.12);
+  color:var(--text);font:inherit;font-size:14px;font-weight:600;text-decoration:none;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.pill:hover{background:rgba(255,255,255,.2)}
+.back{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);left:max(16px,env(safe-area-inset-left,0px));z-index:20}
+.hud{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);right:max(16px,env(safe-area-inset-right,0px));z-index:20;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;
+  pointer-events:none;max-width:calc(100% - 130px)}
+.hud span{background:rgba(17,17,16,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:700;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.hud span b{color:var(--yellow);font-weight:700}
+.hud .pts{background:var(--yellow);color:#111}
+.panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:30;width:min(420px,calc(100% - 32px));max-height:calc(100% - 96px);overflow-y:auto;
+  padding:28px 24px 22px;background:var(--card);border-radius:20px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);text-align:center;
+  box-shadow:0 24px 70px rgba(0,0,0,.5);transition:opacity .3s,transform .35s cubic-bezier(.2,.8,.2,1)}
+.panel.hide{opacity:0;transform:translate(-50%,-46%);pointer-events:none}
+.kicker{font-size:13px;font-weight:600;color:var(--yellow)}
+h1{font-weight:800;font-size:clamp(40px,10vw,56px);line-height:.92;letter-spacing:-.045em;margin:6px 0 0;font-stretch:108%}
+.lead{margin:12px auto 0;color:var(--muted);font-size:15px;line-height:1.45;max-width:30ch}
+.result{margin:14px 0 0;font-size:16px;font-weight:600;line-height:1.4}
+.result b{color:var(--yellow)}
+.form{margin-top:18px;display:grid;gap:10px}
+.form input{padding:13px 16px;font:inherit;font-size:16px;background:rgba(255,255,255,.08);color:var(--text);border:0;border-radius:12px;text-align:center;outline:none;-webkit-user-select:text;user-select:text}
+.form input:focus{box-shadow:0 0 0 2px var(--yellow)}
+.form input.bad{box-shadow:0 0 0 2px #e5484d;animation:nope .3s}
+@keyframes nope{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.play{background:var(--yellow);color:#111;min-height:50px;font:inherit;font-size:16px;font-weight:700;border:0;border-radius:999px;cursor:pointer}
+.play:hover{background:#ffe07a}
+.opts{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.opts .pill{min-height:34px;font-size:13px;padding:0 12px}
+.keys{margin-top:14px;font-size:13px;color:var(--muted);line-height:1.5}
+.keys kbd{font:inherit;font-weight:700;color:var(--text);background:rgba(255,255,255,.1);border-radius:6px;padding:1px 6px}
+.board{margin-top:18px;text-align:left}
+.board h3{margin:0 0 6px;font-size:13px;font-weight:600;color:var(--yellow)}
+.board ol{list-style:none;padding:0;margin:0}
+.board li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px;font-weight:500}
+.board li:last-child{border-bottom:0}
+.board li span:last-child{font-weight:700;color:var(--yellow);font-variant-numeric:tabular-nums}
+.board li small{color:var(--muted);font-weight:500;margin-left:6px}
+.touch{position:fixed;left:0;right:0;bottom:0;z-index:15;display:none;justify-content:space-between;align-items:flex-end;pointer-events:none;
+  padding:0 max(18px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 22px) max(18px,env(safe-area-inset-left,0px))}
+.touch.on{display:flex}
+.touch .pad{display:flex;gap:14px;pointer-events:auto}
+.touch button{width:68px;height:68px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:var(--text);font:inherit;font-size:24px;font-weight:800;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);touch-action:none;pointer-events:auto;display:grid;place-items:center}
+.touch button.down{background:rgba(255,210,63,.5);color:#111}
+.touch .jump{width:84px;height:84px;font-size:15px;background:rgba(255,210,63,.88);color:#111}
+.touch .jump.down{background:#fff0b3}
+.touch svg{width:26px;height:26px}
+@media (max-width:520px){.hud .time{display:none}}
+@media (max-width:420px){.hud{gap:4px;max-width:calc(100% - 112px)}.hud span{padding:7px 9px;font-size:12px}}
+@media (max-height:460px){.panel{padding:18px 20px 16px}.board{display:none}h1{font-size:40px}.touch button{width:58px;height:58px}.touch .jump{width:72px;height:72px}}
+@media (prefers-reduced-motion:reduce){.panel{transition:none}}
+</style>
+</head>
+<body>
+<a href="index.html" class="pill back">← Volver</a>
+<div class="hud" id="hud" aria-live="polite">
+  <span>Nivel <b id="hLevel">1</b>/3</span><span>Queso <b id="hCheese">0</b></span><span>Vidas <b id="hLives">3</b></span><span class="time" id="hTime">0:00</span><span class="pts" id="hScore">0 pts</span>
+</div>
+
+<div class="panel" id="panel" role="dialog" aria-labelledby="pTitle">
+  <span class="kicker" id="pKicker">Borregos S.L. presenta</span>
+  <h1 id="pTitle">Borrego Bros</h1>
+  <p class="lead" id="pLead">Tres salas y tres vidas. Cruza la sede, cómete el queso, pisa a los lobos y llega al trono.</p>
+  <p class="result" id="pResult" hidden></p>
+  <div class="form">
+    <input type="text" id="pName" placeholder="Tu nombre..." maxlength="12" autocomplete="off" aria-label="Tu nombre">
+    <button class="play" id="pPlay">Jugar</button>
+    <div class="opts"><button class="pill" id="pSound" aria-pressed="true">Sonido: sí</button></div>
+  </div>
+  <p class="keys" id="pKeys"><kbd>←</kbd> <kbd>→</kbd> para moverte · <kbd>Espacio</kbd> para saltar.<br>Salta encima de los lobos y las multas. Los petardos, ni tocarlos.</p>
+  <div class="board"><h3>Mejores borregos</h3><ol id="pBoard"></ol></div>
+</div>
+
+<div class="touch" id="touch" aria-hidden="true">
+  <div class="pad">
+    <button data-k="left" aria-label="Izquierda"><svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button data-k="right" aria-label="Derecha"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+  <div class="pad"><button class="jump" data-k="jump" aria-label="Saltar">Saltar</button></div>
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+(function () {
+'use strict';
+/* =========================================================
+   LEVEL (13 rows). . empty  # floor  x crate  = platform (jump through)  z mattress
+   c cheese  w wolf  m flying ticket  ^ firecracker  L checkpoint  K throne  P start
+   ========================================================= */
+const LEVELS = [{"name": "La entrada", "map": ["............................................................................................................................................................................", "..........................................................................................................................................................................xx", "..........................................................................................................................................................................xx", ".............................................................................................c...............................................m............................xx", ".............................................................................................c................m...........................................................xx", "...................................................................................cc..w.....c..............................................................ccc...........xx", ".........................................................c........................========................................................ccc.............................xx", ".......cc.......................c...............m..............................................................cc...........cc...........=======...........xxxx...........xx", "......c..c...c........................cccc...............x......................xx.........................cc..xx.........................................xxxxx......D....xx", "................................x..cc======.............xx...........cc........xxx....................cc...xx...........................x.............c..xxxxxx...........xx", "..P..........x...........w.....xx..................^...xxx...w..w.L...........xxxx...........z...w..j..................L....^^...j..w..xx..........^....xxxxxxx..w........xx", "##################..##################....###############################...#############################............########################...############################", "##################..##################....###############################...#############################............########################...############################"], "movers": []}, {"name": "La galería", "map": ["..........................................................................................................................................................................................................", "........................................................................................................................................................................................................xx", "..............................................................................................................cc.cc.....................................................................................xx", ".............................................................................................................=======....................................................................................xx", "..................................................................................cc....cc.................................m............................................................................xx", ".....................................................................................w..................m.........................................................................m.....................xx", "............................m...................................................xxxxxxxxxxx.......m...........................c.............................................cc..........................xx", "...................................c.........c..c................cccc...........xxxxxxxxxxx............................c........................cc......................................................xx", "................................................................======..........xxxxxxxxxxx..................................................c................c.............xx....................D.....xx", ".......ccc.................................................x....................xxxxxxxxxxx...................................................................x............xxxx.........................xx", "..P.....................w.....w....^...................L..xx..j...^^....w.......xxxxxxxxxxx.........j.......j...z.....................L...^..x..^^...w..w.............j...xxxxxx....w...j..^............xx", "###############...#######################............#######################....####################################................########################.....#########################################", "###############...#######################............#######################....####################################................########################.....#########################################"], "movers": [{"x": 42, "y": 9, "w": 3, "axis": "x", "range": 6, "speed": 2.2, "ph": 0.0}, {"x": 78, "y": 10, "w": 2, "axis": "y", "range": 4.4, "speed": 1.6, "ph": 0.0}, {"x": 117, "y": 9, "w": 3, "axis": "x", "range": 4, "speed": 2.4, "ph": 0.0}, {"x": 124, "y": 8, "w": 3, "axis": "x", "range": 4, "speed": 2.0, "ph": 1.6}]}, {"name": "El trono", "map": ["..............................................................................................................................................................................................................................", "............................................................................................................................................................................................................................xx", "..................................................................................c.c.c.c.c.................................................................................................................................xx", "................................................................................=============...............................................................................................................................xx", "......................................................................c.....................................m...............................................................................................................xx", "..........................m........c....c..........................c.w..............................................m............................c.w.c..........m..........................................ccc..............xx", "......................m...........................................======........................m...............c.............................xx=======.....m.......m.......................................................xx", "....................c...c...c...........................................................................c..............c.....................xxx...................................................cc......xxx..............xx", ".................................................................x..........................................................................xxxx..............c...c...c...................................xxxx......K.......xx", "......cc.........................................................x.........................................................................xxxxx.........................................................xxxxx..............xx", "..P.................^...^...^...................L...j...j...j...xx............z...^^..^^..w...w.............................L.....j...j...xxxxxx..........^...w.......w..................w..j..j...^^...xxxxxx..............xx", "#############....##############................########################....##########################......................#####################.......######################.....############################################", "#############....##############................########################....##########################......................#####################.......######################.....############################################"], "movers": [{"x": 32, "y": 10, "w": 2, "axis": "y", "range": 4, "speed": 1.8, "ph": 0.0}, {"x": 37, "y": 10, "w": 2, "axis": "y", "range": 4, "speed": 1.8, "ph": 3.14}, {"x": 42, "y": 10, "w": 2, "axis": "y", "range": 4, "speed": 1.8, "ph": 0.0}, {"x": 102, "y": 9, "w": 3, "axis": "x", "range": 4, "speed": 2.6, "ph": 0.0}, {"x": 110, "y": 8, "w": 3, "axis": "x", "range": 4, "speed": 2.9, "ph": 1.2}, {"x": 117, "y": 9, "w": 3, "axis": "x", "range": 4, "speed": 2.6, "ph": 2.4}, {"x": 174, "y": 10, "w": 2, "axis": "y", "range": 3, "speed": 1.6, "ph": 0.0}]}];
+const ROWS = 13;
+let COLS = LEVELS[0].map[0].length;
+// each room is harder: faster wolves, shorter par time for the time bonus, its own look
+const LVCFG = [
+  { wolf: 2.4, par: 110, sky: ['#07080a', '#14110e', '#291b10'], wall: 'windows' },
+  { wolf: 2.9, par: 150, sky: ['#07080a', '#15110d', '#26190f'], wall: 'portraits' },
+  { wolf: 3.4, par: 190, sky: ['#0b0606', '#1d0d0b', '#2f140f'], wall: 'drapes' },
+];
+const PHYS = { G: 42, JUMP: 16.2, MAXV: 7.2, ACC_G: 70, ACC_A: 46, DEC: 62, BOUNCE: 25.5, STOMP: 11.5, STOMP_HI: 15.5 };
+const STEP = 1 / 120;
+
+/* ---------- DOM ---------- */
+const $ = (id) => document.getElementById(id);
+const canvas = $('game'), ctx = canvas.getContext('2d');
+const panel = $('panel'), pName = $('pName'), pPlay = $('pPlay'), pBoard = $('pBoard');
+const touchUI = $('touch');
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+pName.value = store.get('borregos_player_name', '');
+
+/* ---------- sprites ---------- */
+const sheepImg = new Image(); sheepImg.src = 'assets/ovejita.webp';
+const HERD = ['samu', 'david', 'frank', 'jose', 'luis', 'leandro', 'adrian', 'ruben', 'alejandro', 'miguel'].map((k) => { const i = new Image(); i.decoding = 'async'; i.src = 'assets/retratos/' + k + '.jpg'; return i; });
+
+/* ---------- sizing ---------- */
+let W = 0, H = 0, DPR = 1, TS = 48, reserve = 0, isTouch = false;
+function resize() {
+  W = innerWidth; H = innerHeight; DPR = Math.min(2, devicePixelRatio || 1);
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  reserve = isTouch && H > W ? 150 : 0;
+  TS = Math.max(22, Math.min(80, Math.min(H / 11, W / (H > W ? 8 : 9.5))));
+  buildSprites(); buildBackdrop();
+  if (game) snapCamera();
+}
+addEventListener('resize', resize);
+
+/* ---------- pre-rendered tiles ---------- */
+const spr = {};
+function off(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = Math.ceil(w * DPR); c.height = Math.ceil(h * DPR);
+  const x = c.getContext('2d'); x.scale(DPR, DPR); draw(x, w, h); return c;
+}
+function buildSprites() {
+  const s = TS;
+  // floor surface: the hall's black-and-cream marble seen edge on, a gilded fillet, dark skirting below
+  for (const parity of [0, 1]) spr['top' + parity] = off(s, s, (x) => {
+    x.fillStyle = '#1d1510'; x.fillRect(0, 0, s, s);
+    const h = s * 0.2;
+    x.fillStyle = parity ? '#e8dfcc' : '#151312'; x.fillRect(0, 0, s / 2, h);
+    x.fillStyle = parity ? '#151312' : '#e8dfcc'; x.fillRect(s / 2, 0, s / 2, h);
+    x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(0, 0, s, Math.max(1, s * 0.03));
+    x.fillStyle = '#c89f52'; x.fillRect(0, h, s, Math.max(1.5, s * 0.05));
+    x.fillStyle = '#2a1d14'; x.fillRect(0, h + s * 0.05, s, s * 0.3);
+    x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(0, h + s * 0.35, s, Math.max(1, s * 0.03));
+    x.fillStyle = 'rgba(255,255,255,.04)'; x.fillRect(s * 0.5, h + s * 0.08, Math.max(1, s * 0.02), s * 0.25);
+  });
+  spr.fill = off(s, s, (x) => {
+    x.fillStyle = '#140f0b'; x.fillRect(0, 0, s, s);
+    x.fillStyle = 'rgba(255,255,255,.035)';
+    x.fillRect(0, s * 0.5, s, Math.max(1, s * 0.03)); x.fillRect(s * 0.25, 0, Math.max(1, s * 0.03), s * 0.5); x.fillRect(s * 0.75, s * 0.5, Math.max(1, s * 0.03), s * 0.5);
+  });
+  spr.crate = off(s, s, (x) => {
+    const r = s * 0.08;
+    x.fillStyle = '#3e2816'; roundRect(x, 0, 0, s, s, r); x.fill();
+    x.fillStyle = '#7a5232'; roundRect(x, s * 0.07, s * 0.07, s * 0.86, s * 0.86, r * 0.6); x.fill();
+    x.strokeStyle = '#4e331e'; x.lineWidth = s * 0.09; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(s * 0.16, s * 0.84); x.lineTo(s * 0.84, s * 0.16); x.stroke();
+    x.fillStyle = 'rgba(255,255,255,.08)'; x.fillRect(s * 0.07, s * 0.07, s * 0.86, Math.max(1, s * 0.04));
+    x.fillStyle = '#c89f52';
+    for (const [cx, cy] of [[0.15, 0.15], [0.85, 0.15], [0.15, 0.85], [0.85, 0.85]]) { x.beginPath(); x.arc(s * cx, s * cy, s * 0.045, 0, 7); x.fill(); }
+  });
+  spr.plat = off(s, s * 0.5, (x) => {
+    x.fillStyle = '#5a3b22'; x.fillRect(0, s * 0.04, s, s * 0.22);
+    x.fillStyle = '#c89f52'; x.fillRect(0, 0, s, Math.max(1.5, s * 0.05));
+    x.fillStyle = 'rgba(0,0,0,.3)'; x.fillRect(0, s * 0.24, s, Math.max(1, s * 0.03));
+    x.fillStyle = '#3e2816'; x.beginPath(); x.moveTo(s * 0.3, s * 0.26); x.lineTo(s * 0.7, s * 0.26); x.lineTo(s * 0.5, s * 0.44); x.fill();
+  });
+}
+function roundRect(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
+
+/* ---------- backdrop: the hall's walls, frames and chandeliers ---------- */
+let skyGrad = null;
+function buildBackdrop() {
+  const sky = LVCFG[game ? game.level : 0].sky;
+  skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+  skyGrad.addColorStop(0, sky[0]); skyGrad.addColorStop(0.55, sky[1]); skyGrad.addColorStop(1, sky[2]);
+}
+function drawBackdrop() {
+  ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, W, H);
+  const floorY = wy(11);
+  // far wall: pilasters with picture frames between them (slow parallax)
+  const P = 0.35, span = 6 * TS, sh = cam.x * TS * P, base = Math.floor(sh / span), ox = base * span - sh;
+  for (let j = -1, x = ox - span; x < W + span; j++, x += span) {
+    const id = ((base + j) % HERD.length + HERD.length) % HERD.length;
+    const top = floorY - 9.5 * TS;
+    ctx.fillStyle = '#100c09'; ctx.fillRect(x, top, TS * 0.55, floorY - top);
+    ctx.fillStyle = 'rgba(200,159,82,.35)'; ctx.fillRect(x - TS * 0.08, top + TS * 0.4, TS * 0.71, Math.max(1, TS * 0.06));
+    const fx = x + span / 2 - TS * 0.9 + TS * 0.27, fy = floorY - 6.4 * TS, fw = TS * 1.8, fh = TS * 2.5;
+    const style = LVCFG[game ? game.level : 0].wall;
+    if (style === 'windows') { drawWindow(fx, fy, fw, fh); continue; }
+    if (style === 'drapes') { drawDrapes(x, span, top, floorY, fx + fw / 2); continue; }
+    const glow = ctx.createRadialGradient(fx + fw / 2, fy, 0, fx + fw / 2, fy + fh * 0.4, fh * 1.1);
+    glow.addColorStop(0, 'rgba(255,200,130,.16)'); glow.addColorStop(1, 'rgba(255,200,130,0)');
+    ctx.fillStyle = glow; ctx.fillRect(fx - fw, fy - fh * 0.6, fw * 3, fh * 2.2);
+    ctx.fillStyle = '#6e5527'; ctx.fillRect(fx, fy, fw, fh);
+    const ix = fx + TS * 0.14, iy = fy + TS * 0.14, iw = fw - TS * 0.28, ih = fh - TS * 0.28, im = HERD[id];
+    ctx.fillStyle = '#1b1612'; ctx.fillRect(ix, iy, iw, ih);
+    if (im.complete && im.naturalWidth) {                 // cover-crop the portrait into the frame
+      const r = iw / ih, sw = Math.min(im.naturalWidth, im.naturalHeight * r), shh = sw / r;
+      ctx.drawImage(im, (im.naturalWidth - sw) / 2, (im.naturalHeight - shh) * 0.3, sw, shh, ix, iy, iw, ih);
+      ctx.fillStyle = 'rgba(14,10,7,.42)'; ctx.fillRect(ix, iy, iw, ih);
+    }
+    ctx.fillStyle = 'rgba(255,214,160,.07)'; ctx.fillRect(ix, iy, iw, ih * 0.45);
+    ctx.fillStyle = '#b89a6a'; ctx.fillRect(fx + fw * 0.25, fy - TS * 0.32, fw * 0.5, Math.max(1.5, TS * 0.05));
+  }
+  // chandeliers (closer)
+  const P2 = 0.6, span2 = 15 * TS, ox2 = -(cam.x * TS * P2) % span2;
+  for (let x = ox2 - span2; x < W + span2; x += span2) {
+    const cx = x + span2 * 0.5, cy = floorY - 8.6 * TS;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, TS * 3.2);
+    g.addColorStop(0, 'rgba(255,190,110,.28)'); g.addColorStop(1, 'rgba(255,190,110,0)');
+    ctx.fillStyle = g; ctx.fillRect(cx - TS * 3.2, cy - TS * 3.2, TS * 6.4, TS * 6.4);
+    ctx.strokeStyle = 'rgba(200,159,82,.6)'; ctx.lineWidth = Math.max(1, TS * 0.04);
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, cy - TS * 0.5); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, cy, TS * 1.1, TS * 0.28, 0, 0, Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, cy - TS * 0.35, TS * 0.6, TS * 0.16, 0, 0, Math.PI); ctx.stroke();
+    ctx.fillStyle = '#ffe2a8';
+    for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.arc(cx + i * TS * 0.48, cy - TS * 0.06 + Math.abs(i) * -TS * 0.04, TS * 0.06, 0, 7); ctx.fill(); }
+  }
+  // below the world (phones in portrait leave room for the buttons)
+  const by = wy(ROWS);
+  if (by < H) { ctx.fillStyle = '#100b08'; ctx.fillRect(0, by, W, H - by); }
+}
+
+// room 1: tall arched windows with moonlight (the foyer)
+function drawWindow(fx, fy, fw, fh) {
+  const x = fx - TS * 0.05, w = fw + TS * 0.1, r = w / 2, top = fy - TS * 0.6, bot = fy + fh + TS * 0.4;
+  const glow = ctx.createRadialGradient(x + r, top + r, 0, x + r, top + r, w * 1.6);
+  glow.addColorStop(0, 'rgba(140,165,220,.14)'); glow.addColorStop(1, 'rgba(140,165,220,0)');
+  ctx.fillStyle = glow; ctx.fillRect(x - w, top - w * 0.6, w * 3, bot - top + w * 1.2);
+  ctx.beginPath(); ctx.moveTo(x, bot); ctx.lineTo(x, top + r); ctx.arc(x + r, top + r, r, Math.PI, 0); ctx.lineTo(x + w, bot); ctx.closePath();
+  const g = ctx.createLinearGradient(0, top, 0, bot); g.addColorStop(0, '#2a3854'); g.addColorStop(1, '#101624');
+  ctx.fillStyle = g; ctx.fill();
+  ctx.strokeStyle = '#4a3a22'; ctx.lineWidth = Math.max(2, TS * 0.08); ctx.stroke();
+  ctx.strokeStyle = 'rgba(30,24,18,.9)'; ctx.lineWidth = Math.max(1, TS * 0.045);
+  ctx.beginPath(); ctx.moveTo(x + r, top); ctx.lineTo(x + r, bot);
+  for (const k of [0.45, 0.72]) { ctx.moveTo(x, top + r + (bot - top - r) * k); ctx.lineTo(x + w, top + r + (bot - top - r) * k); }
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(230,236,255,.5)'; ctx.beginPath(); ctx.arc(x + r * 1.35, top + r * 0.95, TS * 0.12, 0, 7); ctx.fill();
+  ctx.fillStyle = '#3a2d1c'; ctx.fillRect(x - TS * 0.1, bot, w + TS * 0.2, Math.max(2, TS * 0.1));
+}
+// room 3: red velvet drapes and the K crest (the throne room)
+function drawDrapes(x, span, top, floorY, cx) {
+  // a pair of velvet curtains tied back at the sides, with the K crest in the gap
+  const y0 = top + TS * 0.6, y1 = floorY - TS * 0.15, tie = y0 + (y1 - y0) * 0.6, u = TS;
+  ctx.fillStyle = 'rgba(200,159,82,.75)'; ctx.fillRect(cx - u * 2.1, y0 - u * 0.1, u * 4.2, Math.max(2, u * 0.07));
+  for (const side of [-1, 1]) {
+    const inner = cx + side * u * 0.45, outer = cx + side * u * 2.0, tieIn = cx + side * u * 1.35, foot = cx + side * u * 0.95;
+    const g = ctx.createLinearGradient(cx + side * u * 0.4, 0, outer, 0);
+    g.addColorStop(0, '#8a1c26'); g.addColorStop(0.35, '#5c0f16'); g.addColorStop(0.6, '#86202a'); g.addColorStop(1, '#3c0a0d');
+    ctx.fillStyle = g; ctx.beginPath();
+    ctx.moveTo(outer, y0); ctx.lineTo(inner, y0);
+    ctx.quadraticCurveTo(inner + side * u * 0.1, tie - u * 0.8, tieIn, tie);
+    ctx.quadraticCurveTo(foot, tie + u * 0.6, foot - side * u * 0.1, y1);
+    ctx.lineTo(outer + side * u * 0.1, y1); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#c89f52'; ctx.beginPath(); ctx.ellipse(tieIn + side * u * 0.2, tie, u * 0.32, u * 0.08, 0, 0, 7); ctx.fill();
+  }
+  const ky = y0 + u * 1.5;
+  const glow = ctx.createRadialGradient(cx, ky, 0, cx, ky, u * 1.3); glow.addColorStop(0, 'rgba(255,210,63,.18)'); glow.addColorStop(1, 'rgba(255,210,63,0)');
+  ctx.fillStyle = glow; ctx.fillRect(cx - u * 1.3, ky - u * 1.3, u * 2.6, u * 2.6);
+  ctx.strokeStyle = 'rgba(200,159,82,.7)'; ctx.lineWidth = Math.max(1.5, u * 0.05); ctx.beginPath(); ctx.arc(cx, ky, u * 0.5, 0, 7); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,210,63,.75)'; ctx.font = `800 ${u * 0.62}px Archivo, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('K', cx, ky + u * 0.03);
+}
+
+/* ---------- world state ---------- */
+let game = null;
+const cam = { x: 0, y: 0 };
+const wx = (x) => (x - cam.x) * TS, wy = (y) => (y - cam.y) * TS;
+function newGame(name) {
+  const g = { name, lives: 3, cheeseN: 0, score: 0, time: 0, state: 'play', deadT: 0, level: 0, nextLife: 50, parts: [], pops: [] };
+  loadLevel(g, 0);
+  return g;
+}
+function loadLevel(g, i) {
+  const L = LEVELS[i], tiles = L.map.map((r) => r.split(''));
+  COLS = tiles[0].length;
+  Object.assign(g, { level: i, tiles, wolves: [], tickets: [], cheese: [], fire: [], beds: [], checks: [], movers: [], throne: null, door: null, start: null,
+    checkpoint: null, t: 0, lt: 0, parts: [], pops: [], banner: { t: 0, title: 'Nivel ' + (i + 1) + ' de ' + LEVELS.length, sub: L.name } });
+  for (const m of L.movers) g.movers.push({ x0: m.x, y0: m.y, x: m.x, y: m.y, w: m.w, h: 0.32, axis: m.axis, range: m.range, speed: m.speed, ph: m.ph || 0, dx: 0, dy: 0 });
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const ch = tiles[r][c];
+    if (ch === 'P') g.start = { x: c + 0.1, y: r + 1 - 0.95 };
+    else if (ch === 'w' || ch === 'j') g.wolves.push({ x: c + 0.05, y: r + 0.25, w: 0.9, h: 0.75, vx: 0, vy: 0, dir: -1, alive: true, squash: 0, awake: false, t: Math.random() * 9, hop: ch === 'j', hopT: 0.6 + Math.random() });
+    else if (ch === 'm') g.tickets.push({ x0: c, y0: r, x: c, y: r, w: 0.9, h: 0.62, alive: true, squash: 0, ph: Math.random() * 6 });
+    else if (ch === 'c') g.cheese.push({ x: c + 0.15, y: r + 0.2, w: 0.7, h: 0.6, got: false, ph: Math.random() * 6 });
+    else if (ch === '^') g.fire.push({ x: c, y: r });
+    else if (ch === 'L') g.checks.push({ x: c, y: r, lit: false });
+    else if (ch === 'K') g.throne = { x: c, y: r, w: 2, h: 3 };
+    else if (ch === 'D') g.door = { x: c, y: r, w: 2, h: 3 };
+    else if (ch === 'z') { g.beds.push({ c, r, sq: 0 }); continue; }
+    if ('Pwjmc^LKD'.includes(ch)) tiles[r][c] = '.';
+  }
+  g.checkpoint = { x: g.start.x, y: g.start.y };
+  g.p = makePlayer(g.start.x, g.start.y, i ? 1 : 0);
+  if (typeof buildBackdrop === 'function' && W) buildBackdrop();
+}
+function makePlayer(x, y, inv) { return { x, y, w: 0.8, h: 0.95, vx: 0, vy: 0, face: 1, onGround: false, coyote: 0, buffer: 0, inv: inv || 0, dead: false, land: 0, run: 0, spin: 0, forced: false, ride: null }; }
+
+const isSolid = (ch) => ch === '#' || ch === 'x' || ch === 'z';
+function tileAt(c, r) { if (c < 0 || c >= COLS) return 'x'; if (r < 0 || r >= ROWS) return '.'; return game.tiles[r][c]; }
+
+function moveBody(b, dt) {
+  let hitX = 0;
+  b.x += b.vx * dt;
+  const t0 = Math.floor(b.y + 0.001), t1 = Math.floor(b.y + b.h - 0.001);
+  if (b.vx > 0) { const c = Math.floor(b.x + b.w); for (let r = t0; r <= t1; r++) if (isSolid(tileAt(c, r))) { b.x = c - b.w - 0.0001; b.vx = 0; hitX = 1; break; } }
+  else if (b.vx < 0) { const c = Math.floor(b.x); for (let r = t0; r <= t1; r++) if (isSolid(tileAt(c, r))) { b.x = c + 1.0001; b.vx = 0; hitX = -1; break; } }
+  const prevBottom = b.y + b.h;
+  b.y += b.vy * dt; b.onGround = false; b.landTile = null;
+  const l = Math.floor(b.x + 0.001), rr = Math.floor(b.x + b.w - 0.001);
+  if (b.vy > 0) {
+    const r = Math.floor(b.y + b.h);
+    for (let c = l; c <= rr; c++) {
+      const ch = tileAt(c, r);
+      if (isSolid(ch) || (ch === '=' && prevBottom <= r + 0.02)) { b.y = r - b.h; b.vy = 0; b.onGround = true; b.landTile = { ch, c, r }; break; }
+    }
+  } else if (b.vy < 0) {
+    const r = Math.floor(b.y);
+    for (let c = l; c <= rr; c++) if (isSolid(tileAt(c, r))) { b.y = r + 1.0001; b.vy = 0; break; }
+  }
+  return hitX;
+}
+const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+/* ---------- input ---------- */
+const keys = { left: false, right: false, jump: false };
+let jumpEdge = false;
+function setKey(k, v) { if (k === 'jump' && v && !keys.jump) jumpEdge = true; keys[k] = v; }
+const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', Space: 'jump', ArrowUp: 'jump', KeyW: 'jump', KeyZ: 'jump', KeyK: 'jump' };
+addEventListener('keydown', (e) => {
+  if (e.target === pName) { if (e.key === 'Enter') start(); return; }
+  const k = KEYMAP[e.code];
+  if (k) { e.preventDefault(); if (game && game.state === 'play') setKey(k, true); }
+  else if (e.key === 'Enter' && !panel.classList.contains('hide')) start();
+  else if (e.code === 'KeyM') toggleSound();
+});
+addEventListener('keyup', (e) => { const k = KEYMAP[e.code]; if (k) setKey(k, false); });
+addEventListener('blur', () => { keys.left = keys.right = keys.jump = false; });
+function enableTouch() {
+  if (isTouch) return; isTouch = true; touchUI.classList.add('on');
+  $('pKeys').innerHTML = 'Flechas para moverte y <kbd>Saltar</kbd> para saltar (mantenlo pulsado para llegar más alto).<br>Salta encima de los lobos y las multas. Los petardos, ni tocarlos.';
+  resize();
+}
+if (matchMedia('(pointer: coarse)').matches) enableTouch();
+addEventListener('touchstart', enableTouch, { passive: true });
+for (const b of touchUI.querySelectorAll('button')) {
+  const k = b.dataset.k;
+  const on = (e) => { e.preventDefault(); b.setPointerCapture && b.setPointerCapture(e.pointerId); b.classList.add('down'); setKey(k, true); unlockAudio(); };
+  const offK = (e) => { e.preventDefault(); b.classList.remove('down'); setKey(k, false); };
+  b.addEventListener('pointerdown', on); b.addEventListener('pointerup', offK); b.addEventListener('pointercancel', offK); b.addEventListener('lostpointercapture', offK);
+  b.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+
+/* ---------- sound ---------- */
+let AC = null, soundOn = store.get('borrego_bros_sound', true);
+function unlockAudio() { if (!soundOn) return; try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (e) {} }
+function tone(f0, f1, dur, type, vol, delay) {
+  if (!soundOn || !AC) return;
+  try {
+    const t = AC.currentTime + (delay || 0), o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'square'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol || 0.05, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.03);
+  } catch (e) {}
+}
+const sfx = {
+  jump: () => tone(300, 620, 0.13, 'square', 0.035),
+  cheese: () => { tone(988, 988, 0.06, 'square', 0.03); tone(1480, 1480, 0.12, 'square', 0.03, 0.06); },
+  stomp: () => tone(240, 70, 0.14, 'triangle', 0.12),
+  bounce: () => tone(140, 640, 0.28, 'sine', 0.09),
+  check: () => { tone(660, 660, 0.1, 'triangle', 0.07); tone(880, 880, 0.18, 'triangle', 0.07, 0.1); },
+  die: () => tone(520, 90, 0.7, 'sawtooth', 0.045),
+  win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, f, 0.18, 'square', 0.04, i * 0.11)),
+};
+function toggleSound() {
+  soundOn = !soundOn; store.set('borrego_bros_sound', soundOn);
+  $('pSound').textContent = 'Sonido: ' + (soundOn ? 'sí' : 'no'); $('pSound').setAttribute('aria-pressed', String(soundOn));
+  if (soundOn) unlockAudio();
+}
+$('pSound').textContent = 'Sonido: ' + (soundOn ? 'sí' : 'no'); $('pSound').setAttribute('aria-pressed', String(soundOn));
+$('pSound').addEventListener('click', toggleSound);
+
+/* ---------- effects ---------- */
+function puff(x, y, n, color, speed) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = (0.4 + Math.random()) * (speed || 4);
+    game.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, life: 0, max: 0.5 + Math.random() * 0.4, r: 0.08 + Math.random() * 0.12, color });
+  }
+}
+function pop(x, y, text) { game.pops.push({ x, y, text, life: 0 }); }
+function addScore(n, x, y) { game.score += n; if (x !== undefined) pop(x, y, '+' + n); }
+
+/* ---------- simulation ---------- */
+function step(dt) {
+  const g = game, p = g.p;
+  g.t += dt; g.banner.t += dt;
+  if (g.state === 'play' && !p.dead) { g.time += dt; g.lt += dt; }
+  for (const b of g.beds) b.sq = Math.max(0, b.sq - dt * 3);
+  // moving platforms glide back and forth (smoothly slowing at each end)
+  for (const m of g.movers) {
+    const o = m.range * (0.5 - 0.5 * Math.cos(g.t * Math.PI * m.speed / m.range + m.ph));
+    const nx = m.axis === 'x' ? m.x0 + o : m.x0, ny = m.axis === 'y' ? m.y0 - o : m.y0;
+    m.dx = nx - m.x; m.dy = ny - m.y; m.x = nx; m.y = ny;
+  }
+  // tickets float on their own beat
+  for (const m of g.tickets) {
+    if (!m.alive) { m.squash += dt; continue; }
+    m.x = m.x0 + Math.sin(g.t * 1.1 + m.ph) * 1.6; m.y = m.y0 + Math.sin(g.t * 2.3 + m.ph) * 0.7;
+  }
+  // wolves patrol and turn at walls and edges (they wake up as they come into view)
+  const viewW = W / TS;
+  for (const w of g.wolves) {
+    if (!w.alive) { w.squash += dt; continue; }
+    if (!w.awake) { if (w.x < cam.x + viewW + 3) w.awake = true; else continue; }
+    w.t += dt; w.vx = w.dir * LVCFG[g.level].wolf * (w.hop ? 0.8 : 1); w.vy = Math.min(22, w.vy + PHYS.G * dt);
+    if (w.hop && w.onGround && (w.hopT -= dt) <= 0) { w.vy = -11.5; w.hopT = 1.1 + Math.random() * 0.7; }   // hopping wolves
+    if (moveBody(w, dt)) w.dir *= -1;
+    if (w.onGround && !w.hop) {
+      const ahead = w.dir > 0 ? Math.floor(w.x + w.w + 0.05) : Math.floor(w.x - 0.05), below = Math.floor(w.y + w.h + 0.05);
+      const ch = tileAt(ahead, below);
+      if (!isSolid(ch) && ch !== '=') w.dir *= -1;
+    }
+    if (w.y > ROWS + 2) w.alive = false;
+  }
+  if (g.state === 'play') updatePlayer(dt);
+  // particles and score pop-ups
+  for (const q of g.parts) { q.life += dt; q.vy += 14 * dt; q.x += q.vx * dt; q.y += q.vy * dt; }
+  g.parts = g.parts.filter((q) => q.life < q.max);
+  for (const s of g.pops) s.life += dt;
+  g.pops = g.pops.filter((s) => s.life < 0.9);
+}
+
+function updatePlayer(dt) {
+  const g = game, p = g.p;
+  if (p.dead) {
+    p.vy = Math.min(24, p.vy + PHYS.G * dt); p.y += p.vy * dt; p.spin += dt * 9;
+    g.deadT += dt;
+    if (g.deadT > 1.4) afterDeath();
+    return;
+  }
+  if (p.ride) { p.x += p.ride.dx; if (p.vy >= 0) p.y = p.ride.y - p.h; }   // carried by a moving platform
+  const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  if (dir) {
+    p.face = dir;
+    const acc = p.onGround ? PHYS.ACC_G : PHYS.ACC_A;
+    if (Math.sign(p.vx) !== dir) p.vx += dir * acc * 1.6 * dt; else p.vx += dir * acc * dt;
+  } else if (p.onGround) {
+    const d = PHYS.DEC * dt; p.vx = Math.abs(p.vx) <= d ? 0 : p.vx - Math.sign(p.vx) * d;
+  } else p.vx *= Math.pow(0.4, dt);
+  p.vx = Math.max(-PHYS.MAXV, Math.min(PHYS.MAXV, p.vx));
+  // jumping: buffered press, a little coyote time, and a shorter hop if you let go early
+  if (jumpEdge) { p.buffer = 0.13; jumpEdge = false; }
+  p.buffer = Math.max(0, p.buffer - dt); p.coyote = p.onGround ? 0.1 : Math.max(0, p.coyote - dt);
+  if (p.buffer > 0 && p.coyote > 0) { p.vy = -PHYS.JUMP; p.buffer = 0; p.coyote = 0; p.onGround = false; p.ride = null; sfx.jump(); }
+  if (p.vy >= 0) p.forced = false;
+  const grav = p.vy < 0 && !keys.jump && !p.forced ? PHYS.G * 2.3 : PHYS.G;
+  p.vy = Math.min(22, p.vy + grav * dt);
+  const wasGround = p.onGround, prevBottom = p.y + p.h, vyBefore = p.vy;
+  moveBody(p, dt);
+  // landing on a moving platform (one-way, from above)
+  let rideOn = null;
+  if (!p.onGround && p.vy >= 0) for (const m of g.movers) {
+    if (p.x + p.w > m.x + 0.05 && p.x < m.x + m.w - 0.05 && prevBottom <= m.y - m.dy + 0.08 && p.y + p.h >= m.y) {
+      p.y = m.y - p.h; p.vy = 0; p.onGround = true; rideOn = m; break;
+    }
+  }
+  p.ride = rideOn;
+  if (p.onGround && !wasGround && vyBefore > 6) p.land = 0.14;
+  p.land = Math.max(0, p.land - dt); p.inv = Math.max(0, p.inv - dt);
+  if (p.onGround && Math.abs(p.vx) > 0.3) p.run += dt * Math.abs(p.vx) * 2.1;
+  // mattress
+  if (p.landTile && p.landTile.ch === 'z') {
+    p.vy = -PHYS.BOUNCE; p.forced = true; p.onGround = false; sfx.bounce();
+    const b = g.beds.find((q) => q.c === p.landTile.c && q.r === p.landTile.r); if (b) b.sq = 1;
+  }
+  // cheese
+  for (const c of g.cheese) if (!c.got && overlap(p, c)) {
+    c.got = true; g.cheeseN++; addScore(10); puff(c.x + 0.35, c.y + 0.3, 7, '#ffd23f', 3); sfx.cheese();
+    if (g.cheeseN >= g.nextLife) { g.nextLife += 50; g.lives++; pop(p.x + 0.4, p.y - 0.4, '+1 vida'); sfx.check(); }   // a life every 50 cheeses
+  }
+  // enemies: land on top to flatten them, any other touch costs a life
+  const foes = [];
+  for (const w of g.wolves) if (w.alive) foes.push(w);
+  for (const m of g.tickets) if (m.alive) foes.push(m);
+  for (const e of foes) {
+    if (!overlap(p, e)) continue;
+    if (p.vy > 0 && prevBottom <= e.y + 0.45) {
+      e.alive = false; e.squash = 0; p.vy = -(keys.jump ? PHYS.STOMP_HI : PHYS.STOMP); p.forced = true;
+      addScore(50, e.x + e.w / 2, e.y); puff(e.x + e.w / 2, e.y + e.h * 0.5, 12, '#f4f1e8', 4.5); sfx.stomp();
+    } else if (p.inv <= 0) { die(); return; }
+  }
+  for (const f of g.fire) if (overlap(p, { x: f.x + 0.22, y: f.y + 0.32, w: 0.56, h: 0.68 }) && p.inv <= 0) { die(); return; }
+  // checkpoints
+  for (const L of g.checks) if (!L.lit && p.x > L.x - 0.4) { L.lit = true; g.checkpoint = { x: L.x + 0.1, y: L.y + 1 - p.h }; sfx.check(); puff(L.x + 0.5, L.y - 0.1, 10, '#ffb860', 3); }
+  // the door to the next room, and the throne at the end
+  if (g.door && overlap(p, g.door)) clearLevel();
+  if (g.throne && overlap(p, g.throne)) win();
+  if (p.y > ROWS + 1.5) die(true);
+}
+
+function die(fell) {
+  const g = game, p = g.p; if (p.dead) return;
+  p.dead = true; p.vx = 0; p.vy = fell ? 0 : -13; g.deadT = fell ? 0.6 : 0; sfx.die();
+  keys.left = keys.right = false;
+}
+function afterDeath() {
+  const g = game; g.lives--;
+  if (g.lives <= 0) { finish(false); return; }
+  g.p = makePlayer(g.checkpoint.x, g.checkpoint.y, 2);   // a couple of safe seconds after coming back
+  snapCamera(); updateHUD();
+}
+function levelBonus(g) { return 300 + Math.max(0, Math.round(LVCFG[g.level].par - g.lt)) * 10; }
+function clearLevel() {
+  const g = game; if (g.state !== 'play') return;
+  g.state = 'clear'; const b = levelBonus(g); g.score += b;
+  pop(g.door.x + 1, g.door.y - 0.3, '+' + b); sfx.win(); puff(g.door.x + 1, g.door.y + 1, 24, '#ffd23f', 5);
+  setTimeout(() => { if (game !== g) return; loadLevel(g, g.level + 1); g.state = 'play'; keys.left = keys.right = keys.jump = false; snapCamera(); updateHUD(); }, 1600);
+}
+function win() {
+  const g = game; if (g.state !== 'play') return;
+  g.state = 'won';
+  const timeBonus = levelBonus(g), lifeBonus = g.lives * 250;
+  g.bonus = { timeBonus, lifeBonus }; g.score += 500 + timeBonus + lifeBonus;
+  sfx.win(); puff(g.throne.x + 1, g.throne.y + 0.5, 30, '#ffd23f', 6);
+  setTimeout(() => finish(true), 1500);
+}
+function finish(won) {
+  const g = game; g.state = won ? 'won' : 'over';
+  const board = store.get('borrego_bros_scores', []);
+  board.push({ name: g.name, score: g.score, won, level: g.level + 1 });
+  board.sort((a, b) => b.score - a.score);
+  store.set('borrego_bros_scores', board.slice(0, 10));
+  renderBoard();
+  $('pKicker').textContent = won ? 'Nivel completado' : 'Fin de la partida';
+  $('pTitle').textContent = won ? '¡Al trono!' : 'Sin vidas.';
+  $('pLead').hidden = true;
+  const r = $('pResult'); r.hidden = false;
+  r.innerHTML = won
+    ? `Has llegado al trono con <b>${g.cheeseN}</b> ${g.cheeseN === 1 ? 'queso' : 'quesos'} en ${fmtTime(g.time)}.<br><b>${fmtN(g.score)}</b> puntos (incluye ${fmtN(g.bonus.lifeBonus)} por las vidas que te quedaban).`
+    : `Te has quedado en el nivel ${g.level + 1}: ${LEVELS[g.level].name.toLowerCase()}. Te llevas <b>${fmtN(g.score)}</b> puntos y <b>${g.cheeseN}</b> ${g.cheeseN === 1 ? 'queso' : 'quesos'}.`;
+  pPlay.textContent = 'Otra vez';
+  panel.classList.remove('hide');
+}
+
+/* ---------- HUD & board ---------- */
+const fmtN = (n) => n.toLocaleString('es-ES');
+const fmtTime = (s) => { s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const hud = { c: -1, l: -1, s: -1, t: -1, v: -1 };
+function updateHUD() {
+  const g = game; if (!g) return;
+  if (hud.v !== g.level) { hud.v = g.level; $('hLevel').textContent = g.level + 1; }
+  if (hud.c !== g.cheeseN) { hud.c = g.cheeseN; $('hCheese').textContent = g.cheeseN; }
+  if (hud.l !== g.lives) { hud.l = g.lives; $('hLives').textContent = Math.max(0, g.lives); }
+  if (hud.s !== g.score) { hud.s = g.score; $('hScore').textContent = fmtN(g.score) + ' pts'; }
+  const t = Math.floor(g.time); if (hud.t !== t) { hud.t = t; $('hTime').textContent = fmtTime(t); }
+}
+function renderBoard() {
+  const b = store.get('borrego_bros_scores', []);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  pBoard.innerHTML = b.length
+    ? b.map((e, i) => `<li><span>${i + 1}. ${esc(e.name)}<small>${e.won ? 'trono' : 'nivel ' + (e.level || 1)}</small></span><span>${fmtN(e.score)}</span></li>`).join('')
+    : '<li><span>Aún no hay puntuaciones.</span><span></span></li>';
+}
+renderBoard();
+
+/* ---------- camera ---------- */
+function camTarget() {
+  const p = game.p, vw = W / TS, vh = (H - reserve) / TS;
+  let x = p.x + p.w / 2 - vw * 0.42; x = Math.max(0, Math.min(COLS - vw, x));
+  let y;
+  if (vh >= ROWS) y = ROWS - vh;                       // the whole level fits: sit it on the bottom edge
+  else { y = p.y - vh * 0.5; y = Math.max(0, Math.min(ROWS - vh, y)); }
+  return { x, y };
+}
+function snapCamera() { if (!game) { cam.x = 0; cam.y = Math.min(0, ROWS - (H - reserve) / TS); return; } const t = camTarget(); cam.x = t.x; cam.y = t.y; }
+function updateCamera(dt) {
+  const t = camTarget(), k = 1 - Math.exp(-dt * 7);
+  cam.x += (t.x - cam.x) * k; cam.y += (t.y - cam.y) * (1 - Math.exp(-dt * 4));
+}
+
+/* ---------- drawing ---------- */
+function drawTiles() {
+  const c0 = Math.max(0, Math.floor(cam.x) - 1), c1 = Math.min(COLS - 1, Math.ceil(cam.x + W / TS) + 1);
+  const r0 = Math.max(0, Math.floor(cam.y)), r1 = Math.min(ROWS - 1, Math.ceil(cam.y + H / TS));
+  const s = TS + 0.5;
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+    const ch = game.tiles[r][c]; if (ch === '.') continue;
+    const x = Math.floor(wx(c)), y = Math.floor(wy(r));
+    if (ch === '#') ctx.drawImage(tileAt(c, r - 1) === '#' ? spr.fill : spr['top' + (c & 1)], x, y, s, s);
+    else if (ch === 'x') ctx.drawImage(spr.crate, x, y, s, s);
+    else if (ch === '=') ctx.drawImage(spr.plat, x, y, s, s * 0.5);
+  }
+  for (const b of game.beds) drawBed(b);
+}
+function drawBed(b) {
+  const x = wx(b.c), base = wy(b.r + 1), sq = Math.sin(b.sq * Math.PI) * 0.35 * b.sq;
+  const h = TS * (0.98 - sq * 0.5), w = TS * (1 + sq * 0.2), x0 = x - (w - TS) / 2, y0 = base - h;
+  ctx.fillStyle = '#d9dde6'; roundRect(ctx, x0, y0, w, h, TS * 0.18); ctx.fill();
+  ctx.save(); ctx.clip();
+  ctx.fillStyle = '#3d6fb6'; for (let i = 0; i < 4; i++) ctx.fillRect(x0 + (i * 2 + 0.5) * w / 8, y0, w / 8, h);
+  ctx.restore();
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(x0, base - TS * 0.12, w, TS * 0.12);
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x0 + TS * 0.1, y0 + TS * 0.06, w - TS * 0.2, Math.max(1, TS * 0.04));
+}
+function drawCheese(c, t) {
+  if (c.got) return;
+  const bob = Math.sin(t * 3 + c.ph) * 0.08, x = wx(c.x), y = wy(c.y + bob), w = TS * 0.7, h = TS * 0.55;
+  const g = ctx.createRadialGradient(x + w / 2, y + h / 2, 0, x + w / 2, y + h / 2, TS * 0.7);
+  g.addColorStop(0, 'rgba(255,210,63,.22)'); g.addColorStop(1, 'rgba(255,210,63,0)');
+  ctx.fillStyle = g; ctx.fillRect(x - TS * 0.4, y - TS * 0.4, w + TS * 0.8, h + TS * 0.8);
+  ctx.fillStyle = '#e0a91c'; ctx.beginPath(); ctx.moveTo(x, y + h * 0.35); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + h); ctx.lineTo(x, y + h); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(x, y + h * 0.35); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + h * 0.3); ctx.lineTo(x, y + h * 0.6); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#b8830f';
+  for (const [a, b, r] of [[0.3, 0.75, 0.07], [0.62, 0.62, 0.09], [0.82, 0.85, 0.06]]) { ctx.beginPath(); ctx.arc(x + w * a, y + h * b, TS * r, 0, 7); ctx.fill(); }
+}
+function drawWolf(w, t) {
+  const cx = wx(w.x + w.w / 2), base = wy(w.y + w.h);
+  ctx.save(); ctx.translate(cx, base);
+  if (!w.alive) { const k = Math.min(1, w.squash * 3); ctx.globalAlpha = Math.max(0, 1 - w.squash * 1.6); ctx.scale(1 + k * 0.3, 1 - k * 0.75); }
+  ctx.scale(1.15, 1.15);
+  if (w.dir > 0) ctx.scale(-1, 1);                       // drawn facing left
+  const s = TS, step = w.alive ? Math.sin(w.t * 12) : 0;
+  ctx.fillStyle = '#4d4f56';
+  for (const [lx, ph] of [[-0.3, 0], [-0.12, 1], [0.12, 0], [0.3, 1]]) ctx.fillRect(s * lx - s * 0.05, -s * 0.24 + (ph ? step : -step) * s * 0.03, s * 0.1, s * 0.24);
+  const coat = w.hop ? '#6c5a55' : '#7d808a';
+  ctx.fillStyle = coat; ctx.beginPath(); ctx.ellipse(0, -s * 0.38, s * 0.42, s * 0.2, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#5e6069'; ctx.beginPath(); ctx.ellipse(s * 0.02, -s * 0.48, s * 0.34, s * 0.08, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = coat; ctx.beginPath(); ctx.moveTo(s * 0.38, -s * 0.44); ctx.quadraticCurveTo(s * 0.62, -s * 0.62 - step * s * 0.04, s * 0.58, -s * 0.36); ctx.closePath(); ctx.fill();
+  ctx.save(); ctx.translate(-s * 0.4, -s * 0.52);
+  ctx.fillStyle = w.hop ? '#7a6762' : '#8d909a'; ctx.beginPath(); ctx.arc(0, 0, s * 0.17, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-s * 0.1, -s * 0.02); ctx.lineTo(-s * 0.34, s * 0.06); ctx.lineTo(-s * 0.06, s * 0.13); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(-s * 0.33, s * 0.06, s * 0.035, 0, 7); ctx.fill();
+  ctx.fillStyle = '#6a6c75'; for (const ex of [-0.04, 0.09]) { ctx.beginPath(); ctx.moveTo(s * (ex - 0.06), -s * 0.12); ctx.lineTo(s * ex, -s * 0.3); ctx.lineTo(s * (ex + 0.06), -s * 0.12); ctx.fill(); }
+  ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(-s * 0.08, -s * 0.03, s * 0.035, 0, 7); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(-s * 0.09, -s * 0.03, s * 0.015, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(-s * 0.26, s * 0.09); ctx.lineTo(-s * 0.23, s * 0.15); ctx.lineTo(-s * 0.2, s * 0.1); ctx.fill();
+  ctx.restore();
+  ctx.restore();
+}
+function drawTicket(m, t) {
+  const cx = wx(m.x + m.w / 2), cy = wy(m.y + m.h / 2), s = TS;
+  ctx.save(); ctx.translate(cx, cy);
+  if (!m.alive) { ctx.globalAlpha = Math.max(0, 1 - m.squash * 1.8); ctx.rotate(m.squash * 6); ctx.scale(1, Math.max(0.1, 1 - m.squash * 2)); }
+  else ctx.rotate(Math.sin(t * 4 + m.ph) * 0.12);
+  const flap = Math.sin(t * 14 + m.ph) * 0.12;
+  ctx.fillStyle = 'rgba(255,255,255,.75)';
+  for (const sx of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx * s * 0.42, -s * 0.05); ctx.lineTo(sx * s * 0.72, -s * (0.25 + flap)); ctx.lineTo(sx * s * 0.62, s * 0.08); ctx.closePath(); ctx.fill(); }
+  ctx.fillStyle = '#f4f1e8'; roundRect(ctx, -s * 0.42, -s * 0.3, s * 0.84, s * 0.6, s * 0.06); ctx.fill();
+  ctx.fillStyle = '#d9342b'; ctx.fillRect(-s * 0.42, -s * 0.3, s * 0.84, s * 0.16);
+  ctx.fillStyle = '#fff'; ctx.font = `800 ${Math.max(6, s * 0.12)}px Archivo, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('MULTA', 0, -s * 0.22);
+  ctx.fillStyle = '#9a958b'; for (let i = 0; i < 3; i++) ctx.fillRect(-s * 0.32, -s * 0.06 + i * s * 0.1, s * (0.64 - i * 0.14), Math.max(1, s * 0.03));
+  ctx.restore();
+}
+function drawFire(f, t) {
+  const x = wx(f.x), base = wy(f.y + 1), s = TS;
+  ctx.fillStyle = '#7a1d14'; ctx.fillRect(x + s * 0.3, base - s * 0.62, s * 0.4, s * 0.62);
+  ctx.fillStyle = '#c8281e'; ctx.fillRect(x + s * 0.3, base - s * 0.62, s * 0.26, s * 0.62);
+  ctx.fillStyle = '#f4f1e8'; ctx.fillRect(x + s * 0.3, base - s * 0.42, s * 0.4, s * 0.1);
+  ctx.strokeStyle = '#2b2116'; ctx.lineWidth = Math.max(1, s * 0.04); ctx.beginPath(); ctx.moveTo(x + s * 0.5, base - s * 0.62); ctx.quadraticCurveTo(x + s * 0.6, base - s * 0.8, x + s * 0.55, base - s * 0.86); ctx.stroke();
+  const fx = x + s * 0.55, fy = base - s * 0.88;
+  const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, s * 0.4); g.addColorStop(0, 'rgba(255,220,120,.9)'); g.addColorStop(1, 'rgba(255,140,40,0)');
+  ctx.fillStyle = g; ctx.fillRect(fx - s * 0.4, fy - s * 0.4, s * 0.8, s * 0.8);
+  ctx.fillStyle = '#fff3c4';
+  for (let i = 0; i < 5; i++) { const a = t * 20 + i * 1.3, r = s * (0.08 + ((t * 7 + i) % 1) * 0.2); ctx.fillRect(fx + Math.cos(a) * r, fy + Math.sin(a) * r, Math.max(1, s * 0.04), Math.max(1, s * 0.04)); }
+}
+function drawCheck(L, t) {
+  const x = wx(L.x), base = wy(L.y + 1), s = TS;
+  ctx.fillStyle = '#2a1d14'; ctx.fillRect(x + s * 0.44, base - s * 1.5, s * 0.12, s * 1.5);
+  ctx.fillStyle = '#c89f52'; ctx.fillRect(x + s * 0.3, base - s * 1.62, s * 0.4, s * 0.08); ctx.fillRect(x + s * 0.3, base - s * 1.12, s * 0.4, s * 0.06);
+  const lx = x + s * 0.5, ly = base - s * 1.36;
+  if (L.lit) {
+    const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, s * 1.5); g.addColorStop(0, 'rgba(255,190,100,.45)'); g.addColorStop(1, 'rgba(255,190,100,0)');
+    ctx.fillStyle = g; ctx.fillRect(lx - s * 1.5, ly - s * 1.5, s * 3, s * 3);
+  }
+  ctx.fillStyle = L.lit ? '#ffcf7a' : '#3a3229'; ctx.fillRect(x + s * 0.34, base - s * 1.55, s * 0.32, s * 0.42);
+  ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(x + s * 0.49, base - s * 1.55, Math.max(1, s * 0.03), s * 0.42);
+}
+function drawMover(m) {
+  const x = wx(m.x), y = wy(m.y), w = m.w * TS, s = TS;
+  if (m.axis === 'y') {                                    // a lift: hangs from two ropes
+    ctx.strokeStyle = 'rgba(160,130,80,.55)'; ctx.lineWidth = Math.max(1, s * 0.035);
+    ctx.beginPath(); ctx.moveTo(x + w * 0.15, wy(-2)); ctx.lineTo(x + w * 0.15, y); ctx.moveTo(x + w * 0.85, wy(-2)); ctx.lineTo(x + w * 0.85, y); ctx.stroke();
+  }
+  const g = ctx.createRadialGradient(x + w / 2, y + s * 0.4, 0, x + w / 2, y + s * 0.4, w * 0.7);
+  g.addColorStop(0, 'rgba(255,200,110,.18)'); g.addColorStop(1, 'rgba(255,200,110,0)');
+  ctx.fillStyle = g; ctx.fillRect(x - w * 0.2, y - s * 0.3, w * 1.4, s * 1.4);
+  ctx.fillStyle = '#5a3b22'; roundRect(ctx, x, y, w, s * 0.32, s * 0.08); ctx.fill();
+  ctx.fillStyle = '#c89f52'; ctx.fillRect(x + s * 0.04, y, w - s * 0.08, Math.max(1.5, s * 0.06));
+  ctx.fillStyle = '#ffd23f'; for (const k of [0.12, 0.88]) { ctx.beginPath(); ctx.arc(x + w * k, y + s * 0.18, s * 0.05, 0, 7); ctx.fill(); }
+}
+function drawDoor(d, t) {
+  const x = wx(d.x), y = wy(d.y), s = TS, w = 2 * s, h = 3 * s;
+  const g = ctx.createRadialGradient(x + w / 2, y + h * 0.5, 0, x + w / 2, y + h * 0.5, s * 2.6);
+  g.addColorStop(0, `rgba(255,200,110,${0.22 + Math.sin(t * 2) * 0.05})`); g.addColorStop(1, 'rgba(255,200,110,0)');
+  ctx.fillStyle = g; ctx.fillRect(x - s * 2, y - s * 1.5, w + s * 4, h + s * 2.5);
+  ctx.fillStyle = '#c89f52'; ctx.beginPath(); ctx.moveTo(x - s * 0.15, y + h); ctx.lineTo(x - s * 0.15, y + s * 0.85); ctx.arc(x + w / 2, y + s * 0.85, w / 2 + s * 0.15, Math.PI, 0); ctx.lineTo(x + w + s * 0.15, y + h); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#4e331e'; ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y + s * 0.85); ctx.arc(x + w / 2, y + s * 0.85, w / 2, Math.PI, 0); ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffcf7a'; ctx.globalAlpha = 0.85; ctx.fillRect(x + w / 2 - s * 0.05, y + s * 0.4, s * 0.1, h - s * 0.4); ctx.globalAlpha = 1;   // light through the gap
+  ctx.fillStyle = '#6b4a2b'; for (const k of [0.18, 0.58]) { ctx.fillRect(x + s * 0.2, y + h * k + s * 0.3, s * 0.6, s * 0.7); ctx.fillRect(x + s * 1.2, y + h * k + s * 0.3, s * 0.6, s * 0.7); }
+  ctx.fillStyle = '#ffd23f'; for (const k of [0.82, 1.18]) { ctx.beginPath(); ctx.arc(x + s * k, y + h * 0.6, s * 0.06, 0, 7); ctx.fill(); }
+  ctx.fillStyle = '#ffd23f'; ctx.font = `800 ${Math.max(10, s * 0.3)}px Archivo, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('SALIDA', x + w / 2, y - s * 0.35);
+}
+function drawBanner() {
+  const b = game.banner; if (!b || b.t > 2.8 || game.state === 'menu') return;
+  const a = Math.min(1, b.t / 0.35, (2.8 - b.t) / 0.5);
+  ctx.save(); ctx.globalAlpha = Math.max(0, a); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const cy = Math.min(H * 0.32, wy(4)), big = Math.max(30, Math.min(64, W * 0.09));
+  ctx.fillStyle = 'rgba(12,12,11,.55)'; roundRect(ctx, W / 2 - Math.min(W * 0.42, 340), cy - big * 1.05, Math.min(W * 0.84, 680), big * 2.1, 18); ctx.fill();
+  ctx.fillStyle = '#ffd23f'; ctx.font = `700 ${Math.max(13, big * 0.3)}px Archivo, system-ui, sans-serif`; ctx.fillText(b.title, W / 2, cy - big * 0.45);
+  ctx.fillStyle = '#f3f1ec'; ctx.font = `800 ${big}px Archivo, system-ui, sans-serif`; ctx.fillText(b.sub, W / 2, cy + big * 0.22);
+  ctx.restore();
+}
+function drawThrone(k, t) {
+  const x = wx(k.x), y = wy(k.y), s = TS, w = 2 * s, h = 3 * s;
+  const g = ctx.createRadialGradient(x + w / 2, y + h * 0.3, 0, x + w / 2, y + h * 0.3, s * 3.2);
+  g.addColorStop(0, `rgba(255,210,63,${0.28 + Math.sin(t * 2) * 0.06})`); g.addColorStop(1, 'rgba(255,210,63,0)');
+  ctx.fillStyle = g; ctx.fillRect(x - s * 2.5, y - s * 2.5, w + s * 5, h + s * 4);
+  ctx.fillStyle = '#c89f52'; roundRect(ctx, x + s * 0.2, y + s * 0.15, w - s * 0.4, h * 0.62, s * 0.5); ctx.fill();
+  ctx.fillStyle = '#8e1b22'; roundRect(ctx, x + s * 0.4, y + s * 0.4, w - s * 0.8, h * 0.5, s * 0.36); ctx.fill();
+  ctx.fillStyle = '#ffd23f'; ctx.font = `800 ${s * 0.9}px Archivo, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('K', x + w / 2, y + s * 1.05);
+  ctx.fillStyle = '#b01f29'; ctx.fillRect(x + s * 0.1, y + h * 0.66, w - s * 0.2, s * 0.32);
+  ctx.fillStyle = '#c89f52'; ctx.fillRect(x + s * 0.1, y + h * 0.66 + s * 0.3, w - s * 0.2, s * 0.08);
+  ctx.fillStyle = '#6e5527'; ctx.fillRect(x + s * 0.2, y + h * 0.66 + s * 0.38, s * 0.14, h - (h * 0.66 + s * 0.38)); ctx.fillRect(x + w - s * 0.34, y + h * 0.66 + s * 0.38, s * 0.14, h - (h * 0.66 + s * 0.38));
+  // crown on top
+  const cx = x + w / 2, cy = y - s * 0.05, bob = Math.sin(t * 2.4) * s * 0.06;
+  ctx.fillStyle = '#ffd23f'; ctx.beginPath();
+  ctx.moveTo(cx - s * 0.42, cy + bob); ctx.lineTo(cx - s * 0.42, cy - s * 0.3 + bob); ctx.lineTo(cx - s * 0.2, cy - s * 0.12 + bob); ctx.lineTo(cx, cy - s * 0.38 + bob);
+  ctx.lineTo(cx + s * 0.2, cy - s * 0.12 + bob); ctx.lineTo(cx + s * 0.42, cy - s * 0.3 + bob); ctx.lineTo(cx + s * 0.42, cy + bob); ctx.closePath(); ctx.fill();
+}
+function drawPlayer(t) {
+  const p = game.p; if (!p) return;
+  if (p.inv > 0 && !p.dead && Math.floor(p.inv * 12) % 2 === 0) return;
+  const S = TS * 1.45, cx = wx(p.x + p.w / 2), base = wy(p.y + p.h) + TS * 0.04;
+  ctx.save(); ctx.translate(cx, base);
+  if (p.dead) { ctx.translate(0, -S / 2); ctx.rotate(p.spin); ctx.translate(0, S / 2); }
+  else {
+    let sx = 1, sy = 1;
+    if (!p.onGround) { if (p.vy < 0) { sx = 0.93; sy = 1.07; } else { sx = 1.03; sy = 0.98; } }
+    if (p.land > 0) { const k = p.land / 0.14; sx = 1 + 0.12 * k; sy = 1 - 0.12 * k; }
+    const bob = p.onGround ? Math.abs(Math.sin(p.run)) * TS * 0.06 : 0;
+    ctx.translate(0, -bob); ctx.rotate(p.onGround ? Math.sin(p.run) * 0.04 : p.vy * 0.004 * p.face); ctx.scale(sx, sy);
+  }
+  if (p.face > 0) ctx.scale(-1, 1);                    // the drawing faces left
+  if (sheepImg.complete && sheepImg.naturalWidth) ctx.drawImage(sheepImg, -S / 2, -S, S, S);
+  else { ctx.fillStyle = '#fff'; ctx.fillRect(-S * 0.3, -S * 0.6, S * 0.6, S * 0.6); }
+  ctx.restore();
+}
+function drawFx() {
+  for (const q of game.parts) {
+    ctx.globalAlpha = Math.max(0, 1 - q.life / q.max); ctx.fillStyle = q.color;
+    ctx.beginPath(); ctx.arc(wx(q.x), wy(q.y), q.r * TS, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.font = `800 ${Math.max(12, TS * 0.32)}px Archivo, system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const s of game.pops) { ctx.globalAlpha = Math.max(0, 1 - s.life / 0.9); ctx.fillStyle = '#ffd23f'; ctx.fillText(s.text, wx(s.x), wy(s.y - s.life * 1.2)); }
+  ctx.globalAlpha = 1;
+}
+function inView(x, w) { return x + w > cam.x - 1 && x < cam.x + W / TS + 1; }
+function draw() {
+  drawBackdrop();
+  if (!game) return;
+  const t = game.t;
+  drawTiles();
+  for (const L of game.checks) if (inView(L.x, 1)) drawCheck(L, t);
+  if (game.throne && inView(game.throne.x, 2)) drawThrone(game.throne, t);
+  if (game.door && inView(game.door.x, 2)) drawDoor(game.door, t);
+  for (const m of game.movers) if (inView(m.x, m.w)) drawMover(m);
+  for (const f of game.fire) if (inView(f.x, 1)) drawFire(f, t);
+  for (const c of game.cheese) if (inView(c.x, 1)) drawCheese(c, t);
+  for (const w of game.wolves) if ((w.alive || w.squash < 0.7) && inView(w.x, 1)) drawWolf(w, t);
+  for (const m of game.tickets) if ((m.alive || m.squash < 0.6) && inView(m.x, 1)) drawTicket(m, t);
+  drawPlayer(t);
+  drawFx();
+  drawBanner();
+}
+
+/* ---------- loop ---------- */
+let last = 0, acc = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.1, (now - (last || now)) / 1000); last = now;
+  if (document.hidden) return;
+  if (game && game.state !== 'over') {
+    acc += dt;
+    while (acc >= STEP) { step(STEP); acc -= STEP; }
+    updateCamera(dt); updateHUD();
+  }
+  draw();
+}
+
+/* ---------- start ---------- */
+function start() {
+  const name = pName.value.trim();
+  if (!name) { pName.classList.remove('bad'); void pName.offsetWidth; pName.classList.add('bad'); pName.focus(); return; }
+  store.set('borregos_player_name', name);
+  unlockAudio();
+  game = newGame(name); hud.c = hud.l = hud.s = hud.t = hud.v = -1;
+  keys.left = keys.right = keys.jump = false; jumpEdge = false; acc = 0;
+  snapCamera(); updateHUD();
+  panel.classList.add('hide'); if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+pPlay.addEventListener('click', start);
+pName.addEventListener('input', () => pName.classList.remove('bad'));
+
+// attract mode behind the menu: the level, quiet, at the start
+resize();
+game = newGame(''); game.state = 'menu'; snapCamera();
+requestAnimationFrame(frame);
+window.__bros = { get game() { return game; }, keys, setKey, start, cam, goLevel: (i) => { loadLevel(game, i); snapCamera(); } };
+})();
+</script>
+</body>
+</html>
